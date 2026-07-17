@@ -1,0 +1,6 @@
+.DS_Store
+*.tmp
+*.pyc
+__pycache__/
+persian-writing-workspace/
+feedback.json

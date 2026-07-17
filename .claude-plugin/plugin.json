@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "persian-writing",
+  "description": "Professional Persian (Farsi) writing and RTL documents: register-aware human prose, orthography (ZWNJ, Persian digits), cleanup/spell-check scripts, RTL fixes for Word/PDF/PowerPoint/HTML/Excel/images, Persian SEO & copywriting, bundled Vazirmatn/Lalezar fonts.",
+  "version": "1.0.0",
+  "author": {
+    "name": "ali2000hos",
+    "url": "https://github.com/ali2000hos"
+  },
+  "homepage": "https://github.com/ali2000hos/persian-writing",
+  "repository": "https://github.com/ali2000hos/persian-writing",
+  "license": "MIT",
+  "keywords": ["persian", "farsi", "rtl", "writing", "humanize", "seo", "copywriting", "docx", "zwnj", "vazirmatn"]
+}

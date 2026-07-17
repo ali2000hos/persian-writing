@@ -1,0 +1,22 @@
+Persian word list (curated mini-dictionary)
+============================================
+
+This file is a small bundled dictionary used by:
+
+  * `normalize_persian(text, use_dictionary=True)` — for dictionary-aware
+    repeated-letter collapse (preserves legitimate doubles like الله, موسسه,
+    تردد, محقق).
+  * `spellcheck(text)` — for finding the closest dictionary word within
+    edit distance 1.
+
+For production use, replace this file with the full 453K-word list from
+https://github.com/shahind/Persian-Words-Database (the dictionary davat
+uses) — the API is the same: one word per line, UTF-8.
+
+The words below were curated to cover:
+  - Common verbs (past/present stems, infinitives)
+  - High-frequency nouns and adjectives
+  - Words with legitimate doubled letters (للله, سس, دد, حقق, etc.)
+  - Common prefixes/suffixes as standalone words
+
+Lines starting with `#` are comments and are skipped.

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace-manifest.json",
+  "name": "persian-writing",
+  "owner": {
+    "name": "ali2000hos",
+    "url": "https://github.com/ali2000hos"
+  },
+  "description": "The persian-writing skill, installable as a Claude Code plugin.",
+  "plugins": [
+    {
+      "name": "persian-writing",
+      "source": "./",
+      "description": "Professional Persian (Farsi) writing and RTL documents: register-aware prose, orthography, cleanup scripts, RTL document fixes, Persian SEO & copywriting, bundled fonts.",
+      "license": "MIT",
+      "keywords": ["persian", "farsi", "rtl", "writing", "humanize", "seo", "copywriting"]
+    }
+  ]
+}

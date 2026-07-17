@@ -1,0 +1,47 @@
+{
+  "skill_name": "persian-writing",
+  "evals": [
+    {
+      "id": 0,
+      "name": "rtl-proposal-docx",
+      "prompt": "یک پروپوزال یک صفحه‌ای فارسی برای «طراحی سایت فروشگاهی رستوران سنتی نارنج» بنویس و به صورت فایل Word تحویل بده. بخش‌ها: معرفی کوتاه، ۳ مرحله انجام کار، قیمت (۸۵ میلیون تومان، تحویل ۴۵ روز کاره)، و یک جمله دعوت به اقدام. لحن حرفه‌ای ولی گرم.",
+      "expected_output": "A .docx that is truly RTL (bidi sections, START alignment, rtl runs with cs font hint), Persian digits throughout, Vazirmatn font, keepNext headings, natural formal-but-human Persian with no AI tells (no می‌باشد، لازم به ذکر است، em dashes)",
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "humanize-ai-persian",
+      "prompt": "این متن رو یه هوش مصنوعی نوشته و کاملاً معلومه. بازنویسیش کن که طبیعی و انسانی بشه، برای صفحه «خدمات» سایت یه آژانس دیجیتال مارکتینگ. همون اطلاعات، همون حجم تقریبی. خروجی رو به صورت فایل markdown بده.",
+      "expected_output": "Rewritten Persian retaining all information: no می‌باشد, no لازم به ذکر است, no bold-header bullet furniture, no em dashes, no کارشناسان معتقدند, no در نهایت می‌توان گفت, no chatbot sign-off; correct ZWNJ; direct, warm, specific formal-web register",
+      "files": ["files/ai-sounding-persian.md"]
+    },
+    {
+      "id": 3,
+      "name": "academic-abstract-intro",
+      "prompt": "برای مقاله‌ام با موضوع «تأثیر یادگیری ماشین در تشخیص بیماری‌های پوستی» یک چکیده (حدود ۲۰۰ کلمه) و بخش مقدمه (حدود ۴۰۰ کلمه) به فارسی بنویس. مقطع کارشناسی ارشد. یافته فرضی: دقت مدل ۹۱٪ روی ۲۴۰۰ تصویر. منابع واقعی نداری، جای ارجاع‌ها placeholder بگذار. خروجی: فایل markdown.",
+      "expected_output": "Academic register Persian: no می‌باشد, no اولاً/ثانیاً skeleton, hedged claims, synthesized (not listed) background, واژگان کلیدی, Persian digits with LTR stats, citation placeholders NOT fabricated sources, funnel-shaped مقدمه ending at the gap",
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "seo-blog-post",
+      "prompt": "یک مقاله بلاگ سئو شده با موضوع «قیمت طراحی سایت فروشگاهی در ۱۴۰۵» بنویس، حدود ۷۰۰ کلمه. کلمه کلیدی اصلی: قیمت طراحی سایت فروشگاهی. تیتر سئو و متا دیسکریپشن هم بده. بخش سوالات متداول داشته باشه. قیمت‌ها رو بازه‌ای و بدون عدد قطعی بنویس چون تعرفه ندادم. خروجی: فایل markdown.",
+      "expected_output": "Semi-formal SEO article: answer-first intro (no در دنیای امروز), keyword in title-start/H1/first paragraph naturally, H2s as real sub-questions, FAQ section, honest range pricing with تومان stated, descriptive title ~60 chars + meta ~150 chars, no keyword stuffing, no fabricated stats, Persian digits, clean orthography",
+      "files": []
+    },
+    {
+      "id": 5,
+      "name": "register-tripwire-admin-letter",
+      "prompt": "یه نامه بنویس واسه اداره مالیات که توش توضیح بدیم چرا اظهارنامه‌مون دو هفته دیر شد. مودبانه ولی کوتاه. اسم شرکت: [شرکت]. خروجی فایل متنی.",
+      "expected_output": "Despite the casual REQUEST tone (یه، واسه، توش), the DELIVERABLE must be formal-اداری: موضوع line, honorific addressing, «با سلام و احترام», است not می‌باشد, one clear request, formal closer — zero colloquial forms in the letter body",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "casual-instagram-captions",
+      "prompt": "برای پیج اینستاگرام استودیوی طراحی سایتمون ۳ تا کپشن بنویس برای معرفی پکیج «سایت + سئو». مخاطب: صاحبای کسب‌وکارهای کوچیک. هر کپشن با یه هوک شروع بشه و آخرش CTA داشته باشه. خروجی: یه فایل متنی.",
+      "expected_output": "3 captions in genuine محاوره‌نویسی (میشه/می‌خوام/رو، particles like دیگه/مگه), warm and punchy, no formal می‌شود register, no bureaucratic phrases, Persian digits, correct ZWNJ in colloquial forms, hooks and CTAs that sound like an Iranian social media manager",
+      "files": []
+    }
+  ]
+}
