@@ -51,8 +51,11 @@ def font_report(pdf, expected):
             if not emb:
                 errs.append(f'font not embedded: {name}')
             base = name.split('+')[-1].lower()
-            if any(f in base for f in ('dejavu', 'liberation', 'nimbus')):
-                errs.append(f'fallback font in PDF: {name} — Persian font was not found at conversion time')
+            if any(f in base for f in ('dejavu', 'liberation', 'nimbus', 'opensymbol',
+                                       'notosans', 'freesans', 'geeza', 'arialunicode')):
+                errs.append(f'fallback font in PDF: {name} — a glyph was not found in your Persian '
+                            f'font (often a built-in list bullet or an unverified symbol). '
+                            f'See docx-pdf.md §6.1 and §1.4')
             elif expected and not any(e.lower() in base for e in expected):
                 warns.append(f'unexpected font: {name}')
     else:

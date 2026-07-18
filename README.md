@@ -52,6 +52,7 @@ as knowledge (GPTs / Projects / Gems) — the whole skill in one self-contained 
 ```bash
 python3 scripts/persian_cleanup.py --edit --spellcheck draft.txt   # fix + spell-check
 python3 scripts/fa_lint.py --check draft.txt                       # lint report
+python3 scripts/verify_docx.py out.docx --expect-font Vazirmatn --fix  # DOCX RTL QA
 python3 scripts/verify_pdf.py out.pdf --expect-font Vazirmatn      # PDF QA
 ```
 Python 3.8+, standard library only.
@@ -71,7 +72,7 @@ SKILL.md                 entry point: routing + non-negotiables
 AGENTS.md                guidance for any AI agent
 references/              writing-style, orthography, academic, seo-copywriting,
                          fonts, docx-pdf, pptx, html-css, format-skills-fa, cleanup/
-scripts/                 persian_cleanup, fa_lint, verify_pdf,
+scripts/                 persian_cleanup, fa_lint, verify_docx, verify_pdf,
                          install_fonts, download_fonts, build_universal
 assets/                  fonts (TTF) + 453K-word dictionary
 universal/               single-file edition for chat-only AIs
@@ -84,6 +85,7 @@ After editing SKILL.md or references, regenerate the single-file edition:
 
 ## Version history
 
+- **1.0.2** — verified RTL fixes: section-level `<w:bidi/>` position (silent column reversal), built-in list numbering producing Latin digits, Word template heading colors, font fallback. New `scripts/verify_docx.py` with `--fix`.
 - **1.0.0** — initial release: 4 registers + detection procedure, 18 AI-tell
   patterns, paknevis+davat cleanup with frequency-ranked spell-check, RTL
   recipes for docx/pptx/html/xlsx/images, PDF verification, academic + SEO +

@@ -129,7 +129,7 @@ NOT in Vazirmatn/Lalezar (falls back to DejaVu): ▪ ■ ⊙ ◆ ✓ ✕ ● ○
 Other Persian fonts have different coverage — run the check above before using
 any symbol; a fallback shows up later as a DejaVu row in `pdffonts`.
 
-### 1.5 Every section: bidi
+### 1.5 Every section: bidi — and VERIFY it reached the XML
 
 ```javascript
 sections.push({
@@ -140,6 +140,57 @@ sections.push({
   children: [...]
 })
 ```
+
+**Setting it is not the same as it being written.** Some docx-js versions
+silently drop `bidi` from section properties, and in python-docx it is easy to
+append `<w:bidi/>` in the wrong position. `<w:bidi/>` must be the FIRST child
+of `<w:sectPr>` (OOXML enforces child order — appended at the end, renderers
+ignore it). Always check the produced file, not your source code:
+
+```bash
+unzip -p output.docx word/document.xml | grep -o '<w:sectPr[^>]*>.\{0,20\}'
+# want: <w:sectPr ...><w:bidi/><w:pgSz .../>
+# a sectPr going straight to <w:pgSz/> means the flag was dropped
+```
+
+**What section bidi actually controls** (measured, LibreOffice render):
+it sets the section's BASE direction, which every element without its own
+explicit direction inherits. A table with no `bidiVisual` renders its first
+column on the LEFT without section bidi, and on the RIGHT with it — a silent
+column-order reversal. Paragraphs and runs that DO carry their own
+`bidirectional`/`rightToLeft` flags render correctly either way, so a
+fully-flagged document may look fine and still be a trap: the first element
+someone adds later without flags inherits the wrong direction.
+
+Treat section bidi as the safety net, not the mechanism: set it, verify it in
+the XML, AND set the per-paragraph/run/table flags. Belt and braces, because
+each covers what the other misses.
+
+**Patch it post-generation when the library drops it** — language-agnostic,
+works on any .docx from any toolchain:
+
+```python
+import zipfile, re, shutil
+
+def force_section_bidi(docx_path):
+    """Insert <w:bidi/> as the first child of every <w:sectPr>. Idempotent."""
+    tmp = docx_path + '.tmp'
+    zin = zipfile.ZipFile(docx_path)
+    items = {n: zin.read(n) for n in zin.namelist()}
+    zin.close()
+    xml = items['word/document.xml'].decode('utf-8')
+    xml = re.sub(r'(<w:sectPr[^>]*>)(?!<w:bidi/>)', r'\1<w:bidi/>', xml)
+    items['word/document.xml'] = xml.encode('utf-8')
+    with zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED) as zout:
+        for n, d in items.items():
+            zout.writestr(n, d)
+    shutil.move(tmp, docx_path)
+    return xml.count('<w:sectPr')
+```
+
+Node equivalent if you're in docx-js: same regex over `word/document.xml`
+using `adm-zip` (`zip.readAsText` → replace → `zip.updateFile` → `writeZip`).
+The `(?!<w:bidi/>)` guard keeps it safe to run twice.
 
 ### 1.6 Document default styles
 
@@ -460,3 +511,92 @@ Notes that bite in python-docx specifically:
 - The unsplittable-card trick is identical: 1×1 table + `cant_split(row)`.
 - Same digits/symbols/verification rules as above — they're format rules,
   not library rules.
+
+### 6.1 Three failures the per-paragraph helpers do NOT fix
+
+Setting bidi on every paragraph you create still leaves three holes, because
+Word/LibreOffice pull from `styles.xml` and `numbering.xml`, which python-docx
+generates from a Latin default template. All three are verified failures, not
+theory: without the fix below, a test document rendered `.1` (Latin digit,
+wrong side) for list items, a blue Heading nobody asked for, and pulled DejaVu +
+OpenSymbol into the PDF. With it: Persian «۱.», black heading, Vazirmatn only.
+
+**Run this once, right after `Document()`, before adding content:**
+
+```python
+from docx.shared import Pt, RGBColor
+
+def persianize_styles(doc, font='Vazirmatn', size=11):
+    """Fix the document-wide defaults python-docx inherits from its Latin template.
+    Without this: Latin list numbers, Word's blue headings, DejaVu fallback."""
+    st = doc.styles['Normal']
+    st.font.name = font
+    st.font.size = Pt(size)
+    rPr = st.element.get_or_add_rPr()
+    rF = rPr.find(qn('w:rFonts'))
+    if rF is None:
+        rF = _set(OxmlElement('w:rFonts'), rPr)
+    for a in ('w:ascii', 'w:hAnsi', 'w:cs'):
+        rF.set(qn(a), font)                       # cs = the Persian-shaping slot
+    _set(OxmlElement('w:rtl'), rPr)
+    _set(OxmlElement('w:szCs'), rPr).set(qn('w:val'), str(int(size * 2)))
+    _set(OxmlElement('w:bidi'), st.element.get_or_add_pPr())
+
+    # Built-in Heading styles: Persian font, bidi, and NO inherited color.
+    # Word's Heading 1-4 default to blue — an accent the user never asked for.
+    for i in range(1, 5):
+        try:
+            h = doc.styles[f'Heading {i}']
+        except KeyError:
+            continue
+        h.font.name = font
+        h.font.color.rgb = RGBColor(0, 0, 0)      # neutral; see SKILL.md visual neutrality
+        hr = h.element.get_or_add_rPr()
+        hf = hr.find(qn('w:rFonts'))
+        if hf is None:
+            hf = _set(OxmlElement('w:rFonts'), hr)
+        for a in ('w:ascii', 'w:hAnsi', 'w:cs'):
+            hf.set(qn(a), font)
+        _set(OxmlElement('w:rtl'), hr)
+        _set(OxmlElement('w:bidi'), h.element.get_or_add_pPr())
+```
+
+**Numbered and bulleted lists: do NOT use the built-in list styles.**
+`doc.add_paragraph(style='List Number')` writes numbering into `numbering.xml`,
+which carries no bidi and renders Latin `1.` on the wrong side; the `List
+Bullet` glyph comes from OpenSymbol and drags a fallback font into the PDF.
+Number manually instead — the marker becomes a normal Persian run you control:
+
+```python
+FA_DIGITS = "۰۱۲۳۴۵۶۷۸۹"
+to_fa = lambda n: str(n).translate(str.maketrans("0123456789", FA_DIGITS))
+
+for i, item in enumerate(items, 1):
+    p = rtl_paragraph(doc.add_paragraph())
+    fa_run(p, f"{to_fa(i)}.  ")     # ۱.  ۲.  ۳. — stays RTL, right side
+    fa_run(p, item)
+
+for item in bullets:
+    p = rtl_paragraph(doc.add_paragraph())
+    fa_run(p, "•  ")                # • verified in Vazirmatn; ▪ is NOT
+    fa_run(p, item)
+```
+Indent with `p.paragraph_format.right_indent` (RTL side), not `left_indent`.
+
+**Headers and footers are separate XML parts** (`header1.xml`, `footer1.xml`)
+and inherit nothing from the body — apply `rtl_paragraph` + `fa_run` to each:
+
+```python
+for section in doc.sections:
+    for part in (section.header, section.footer):
+        for p in part.paragraphs:
+            rtl_paragraph(p)
+            # rebuild text through fa_run so the cs font/rtl flags exist
+```
+Page numbers in footers: a Latin field digit flips the line — prefer a Persian
+literal, or accept Latin numerals in the footer only.
+
+**Confirm the fix in the output, not the code:** `pdffonts out.pdf` must list
+your Persian font and nothing else. A `DejaVu` or `OpenSymbol` row means a
+glyph fell back — usually a list bullet or a symbol from §1.4.
+`scripts/verify_pdf.py` flags this automatically.

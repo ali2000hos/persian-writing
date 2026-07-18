@@ -14,7 +14,7 @@ description: >
   like فارسی, Farsi, Persian, Iran, RTL, راست‌چین, نیم‌فاصله, ویرایش, مقاله,
   پایان‌نامه, سئو, کپشن, Vazirmatn — even if the user never mentions this skill.
 metadata:
-  version: 1.0.0
+  version: 1.0.2
 license: MIT (bundled fonts under SIL OFL)
 compatibility: >
   Any agent that reads Markdown skills (Claude, Claude Code, Cursor, Codex,
@@ -165,21 +165,42 @@ Format-specific recipes live in the reference files. The universal ones:
 3. Every section: `bidi: true`. Tables that must flow right-to-left:
    `visuallyRightToLeft: true`.
 4. **Persian digits in numbered content** — a Latin "1." flips the paragraph LTR.
-5. **Pagination:** headings get `keepNext + keepLines` (no orphan headings);
+   Corollary for docx: never use the built-in `List Number`/`List Bullet` styles.
+   Their markers live in `numbering.xml`, which has no bidi and renders Latin
+   `1.` on the wrong side plus an OpenSymbol bullet that breaks font embedding.
+   Write markers as ordinary runs («۱.  », «•  ») — docx-pdf.md §6.1.
+5. **Fix the document defaults before adding content.** python-docx starts from
+   a Latin template: `styles.xml` has no Persian font and Word's Heading styles
+   carry a blue color you never asked for. Run `persianize_styles(doc)` from
+   docx-pdf.md §6.1 immediately after `Document()`. Headers/footers are separate
+   XML parts and need the RTL treatment applied to them directly.
+6. **Pagination:** headings get `keepNext + keepLines` (no orphan headings);
    cards/boxes go inside a single-cell table with `cantSplit: true` (never split
    across pages); no separator after the last list item; no stray `PageBreak`
    before a section break (blank pages).
-6. **Symbols:** Persian fonts miss many glyphs. In bundled Vazirmatn/Lalezar
+7. **Symbols:** Persian fonts miss many glyphs. In bundled Vazirmatn/Lalezar
    only • and · are verified; ▪ ■ ✓ ✕ ● ◆ ⊙ fall back to DejaVu. For any other
    symbol/font, check the cmap first (fonts.md shows how).
 
 ## Verify before delivering
 
-Never hand over a Persian PDF you haven't checked:
+Two gates. Check the .docx BEFORE converting (catches what code review can't),
+then check the PDF:
 
 ```bash
+# 1. DOCX: section bidi, per-paragraph coverage, jc=right traps, cs fonts,
+#    built-in list numbering, Arabic chars, template heading colors.
+#    --fix repairs missing <w:bidi/> in every section.
+python3 scripts/verify_docx.py output.docx --expect-font Vazirmatn --fix
+
+# 2. PDF: fallback fonts, blank pages, template leaks, Arabic chars
 python3 scripts/verify_pdf.py output.pdf --expect-font Vazirmatn
 ```
+
+`verify_docx.py` exists because setting an RTL flag and that flag reaching the
+XML are different things: libraries drop `bidi` from section properties, and
+OOXML requires `<w:bidi/>` to be the FIRST child of `<w:sectPr>` — appended
+anywhere else, renderers ignore it. Verify the artifact, never the source code.
 
 It checks: near-empty pages, "undefined"/template leaks, non-embedded or fallback
 fonts, Arabic ي/ك in extracted text, and page count. Fix every warning, regenerate,
@@ -206,6 +227,7 @@ persian-writing/
 ├── scripts/
 │   ├── persian_cleanup.py      ← FIX: edit/clean/normalize/spell-check (paknevis+davat)
 │   ├── fa_lint.py              ← LINT: report issues needing contextual judgment
+│   ├── verify_docx.py          ← DOCX RTL checks (+ --fix for section bidi)
 │   ├── verify_pdf.py           ← post-generation PDF checks
 │   ├── install_fonts.sh        ← bundled fonts → ~/.fonts (run before PDF export)
 │   └── download_fonts.py       ← fetch extra families (needs GitHub access)

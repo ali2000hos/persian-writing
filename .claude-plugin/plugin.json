@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "persian-writing",
   "description": "Professional Persian (Farsi) writing and RTL documents: register-aware human prose, orthography (ZWNJ, Persian digits), cleanup/spell-check scripts, RTL fixes for Word/PDF/PowerPoint/HTML/Excel/images, Persian SEO & copywriting, bundled Vazirmatn/Lalezar fonts.",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "author": {
     "name": "ali2000hos",
     "url": "https://github.com/ali2000hos"
