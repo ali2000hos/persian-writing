@@ -49,13 +49,13 @@ one paragraph raises the question the next answers.
 paragraphs. When information is genuinely a list, embed it:
 
 > ❌ مزایای این روش عبارتند از:
-> • کاهش زمان پردازش
+> • کاهش زمان اجرا
 > • کاهش هزینه
-> • مقیاس‌پذیری بهتر
+> • دقت بیشتر
 >
-> ✅ این روش سه مزیت عملی داشت: زمان پردازش هر درخواست از ۸ ثانیه به ۲ ثانیه
-> رسید، هزینه‌ی زیرساخت حدود ۳۰٪ کاهش یافت و معماری جدید بدون بازنویسی تا
-> ده برابر بارِ فعلی را تحمل می‌کند.
+> ✅ این روش سه مزیت عملی داشت: زمان اجرای هر آزمون از ۸ دقیقه به ۲ دقیقه
+> رسید، هزینه‌ی هر نمونه حدود ۳۰٪ کاهش یافت و خطای اندازه‌گیری از ۵٪ به ۲٪
+> رسید.
 
 **A3. Source-listing instead of synthesis.** «اسمیت (۲۰۱۸) روشی ارائه کرد...
 جانسون (۲۰۱۹) مدلی توسعه داد... براون (۲۰۲۰) بررسی کرد...» is an annotated
@@ -151,6 +151,30 @@ cycling reads as AI *and* confuses reviewers.
 
 Note what changed: synthesis with a through-line, real numbers, Latin names
 left Latin, one hedge, no اولاً/ثانیاً, no می‌باشد, ends at the gap.
+
+## 9.5 AI assistance, disclosure, and detector accusations
+
+Academic work is where authorship claims carry the most weight, so two things
+need saying plainly.
+
+**Disclosure follows the institution's rule, not convenience.** Universities and
+journals differ: some permit AI assistance for language editing, some require a
+declaration, some prohibit it for substantive drafting. Find the actual policy
+(شیوه‌نامه‌ی دانشگاه، راهنمای نویسندگان مجله) and follow it. Writing help that
+is disclosed where disclosure is required stays honest; the same help concealed
+does not. This skill improves the writing — it does not launder authorship, and
+the techniques for disguising it (invisible characters, homoglyphs, injected
+errors) are not here and should not be sought elsewhere.
+
+**If a detector falsely flags a student's or researcher's work**, that is a
+documented and common failure, not proof of anything. Persian-speaking authors
+writing in English are hit hardest: one study of seven detectors measured a
+**61.3% average false-positive rate for non-native English writers**, a 2023
+evaluation of 14 tools found none reached 80% accuracy, and several major
+universities withdrew from these tools over reliability concerns. A score is a
+style guess, never evidence of authorship. Anyone facing such an accusation
+should present drafts, notes, version history and sources — the ordinary
+evidence of having done the work — rather than trying to satisfy the tool.
 
 ## 10. Checklist before delivering academic text
 

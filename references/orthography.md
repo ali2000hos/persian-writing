@@ -81,6 +81,48 @@ Write it explicitly only where the host word demands it:
 - After ا and و: صدای بلند، عموی من (the ی is mandatory)
 - Diacritic کسره (ِ) only for disambiguation in formal/educational text.
 
+### 5.1 هکسره — the error Iranians mock most
+
+Two different things sound identical at the end of a word, so writers swap them.
+Getting this wrong in public copy is the single fastest way to look careless:
+Iranians screenshot هکسره mistakes off billboards and brand accounts for sport.
+
+| | What it is | Written | Example |
+|---|---|---|---|
+| **کسره‌ی اضافه** | links a noun to what follows (ezafe) | kasre — usually left unwritten, never «ه» | کتابِ من / کتاب من |
+| **«ـه» clitic** | colloquial short form of «است» (predicate) | attached «ه» | این کتابه = این کتاب است |
+
+**The test that always works:** replace the ending with «است» and read it aloud.
+If the sentence still makes sense, the correct spelling is «ـه». If it turns to
+nonsense, you need a kasre (and usually write nothing at all).
+
+- «این کتابه» ← «این کتاب است» ✓ → «ـه» correct
+- «کتابه من» ← «کتاب است من» ✗ → ezafe needed: **کتابِ من** (or plain «کتاب من»)
+
+**Wrong → right:**
+
+| ❌ | ✅ | Why |
+|---|---|---|
+| کتابه من رو ندیدی؟ | کتابِ من رو ندیدی؟ | ezafe, not «است» |
+| کلاسه زبان می‌رم | کلاسِ زبان می‌رم | ezafe |
+| قیمته این محصول چنده؟ | قیمتِ این محصول چنده؟ | first is ezafe, second («چنده») is «است» ✓ |
+| سایته شرکت بالا نمیاد | سایتِ شرکت بالا نمیاد | ezafe |
+| هوا خیلی خوبِ | هوا خیلی خوبه | predicate «است» — the reverse error |
+| ماشینه من خرابه | ماشینِ من خرابه | ezafe first, «است» second ✓ |
+
+**Careful — these are NOT errors.** Many nouns simply end in ه, and they take a
+normal ezafe like any other word: خانه، نامه، برنامه، پروژه، مقاله، هفته، تجربه،
+شماره، بچه. «نامه شما رسید» and «پروژه‌ی شما» are both fine; nothing was swapped.
+
+**Register note:** the «ـه» clitic belongs to colloquial writing only. In formal
+or academic text write «است» in full — «این کتاب است»، not «این کتابه». So a
+formal document that contains «ـه» clitics has a register problem, not just an
+orthography one (see writing-style.md).
+
+`scripts/fa_lint.py --check` flags probable هکسره in both directions. It reports
+rather than auto-fixes, because only context decides which of two identical
+sounds the writer meant — and a wrong "fix" here changes the meaning.
+
 ## 6. Spacing hygiene
 
 - Exactly one space between words; no double spaces (common AI artifact).

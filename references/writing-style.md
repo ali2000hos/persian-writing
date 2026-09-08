@@ -114,6 +114,13 @@ For social/chat contexts, written Persian mirrors speech:
   strangers is rude; overusing formal شما forms with friends is cold.
 - **تعارف:** exists even casually («قابلی نداره»، «مخلصیم») but one beat of it.
   Don't stack three politeness rituals in a DM.
+- **هکسره — the error that undoes everything else.** Colloquial writing is
+  exactly where the «ـه» clitic (= است) lives, so it is also where writers
+  collide it with the ezafe kasre. «این کتابه» (this is a book) is right;
+  «کتابه من» is wrong and should be «کتابِ من». One هکسره in an Instagram
+  caption gets quoted back at the brand; it reads as carelessness, not casualness.
+  Test each one by swapping in «است»: if the sentence survives, «ـه» is correct.
+  Full rules and the wrong/right table: orthography.md §5.1.
 
 Consistency rule: don't mix میشه and می‌شود in the same piece. Pick the register
 and hold it. (Exception: quoting someone's speech inside formal text.)
@@ -123,7 +130,14 @@ user or their brief actually provides. Never invent stats, years of experience,
 client counts, partner names, or hashtags — an invented «۹۷٪ رضایت» or a brand
 hashtag the user never asked for damages trust more than a plain sentence. No
 facts available? Write generic-but-concrete claims and tell the user which
-blanks to fill.
+blanks to fill. The full discipline — separating واقعیت from نظر, پیش‌بینی and
+ادعا, and what to do with contradictory sources — is in content-structures.md §3.
+
+Point of view is a separate axis from register, and an easy one to get wrong:
+impersonal for facts and mechanisms, second person for what the reader does
+(the verb alone — repeating «شما» reads as translated English), «ما» only for
+the organization's own actions and responsibilities. See content-structures.md
+§1 for the full table; social-channels.md covers what changes per channel.
 
 ## Part 2: Persian AI tells — find and rewrite
 
@@ -165,7 +179,7 @@ Openers: در دنیای امروز، در عصر دیجیتال، امروزه 
 با کیفیتی بی‌رقیب. Specifics or silence.
 
 > ❌ تیم ما با تجربه‌ای بی‌نظیر، خدماتی منحصربه‌فرد ارائه می‌دهد.
-> ✅ در پنج سال گذشته ۴۰ سایت فروشگاهی راه انداخته‌ایم؛ سه‌تایشان الان روزی
+> ✅ در پنج سال گذشته ۴۰ پروژه تحویل داده‌ایم؛ سه‌تایشان الان روزی
 > هزار سفارش دارند.
 
 ### T7. Rule of three
@@ -239,6 +253,86 @@ brand names mid-Persian is fine, but no ALL-CAPS shouting.
   Forcing pure-Persian coinages (تارنما for سایت) sounds weirder than the loan.
 - **One همچنین, one خیلی, one exclamation** — isolated instances mean nothing.
   Look for clusters.
+
+## Part 3.5: Why machine prose reads flat — the underlying mechanism
+
+T1–T18 are symptoms. Two properties of how language models generate text
+explain most of them, and knowing the cause lets you fix cases the list doesn't
+name.
+
+**Predictability (perplexity).** A model picks, at each step, a highly probable
+next word. Do that thousands of times and every phrase becomes the expected
+one. In Persian this surfaces as the safe collocation every single time:
+«اهمیت» always arriving with «ویژه‌ای»، «نقش» with «بسزایی»، «تیم» with
+«مجرب». Nothing is wrong with any one of them; the tell is that no phrase ever
+surprises. A human writer, even a careful one, occasionally reaches for the
+less obvious word — and that irregularity is what reads as a person thinking.
+
+**Uniformity (burstiness).** Human writing varies: a 6-word sentence next to a
+30-word one, a two-line paragraph after a dense one, a section that runs long
+because the idea deserved it. Generated text clusters in a narrow band —
+sentences mostly 15–20 words, paragraphs of equal weight, sections of equal
+length, every list with the same number of items. The prose has no dynamics.
+
+Measured on the samples shipped with this skill: an AI-written services page
+scored 0.39 sentence-length variation with paragraphs all within 0.19 of each
+other, while its rewrite reached 0.65 with sentences from 2 to 27 words. Check
+your own draft with:
+
+```bash
+python3 scripts/fa_lint.py --check --rhythm text.md
+```
+
+Read the output as an editor's nudge, not a verdict. Rhythm is a **secondary**
+signal: in that same comparison, the count of lexical tells went from 11 to 0,
+which is the change a reader actually feels. A text with perfect variance and
+«می‌باشد» in every paragraph still reads as machine-written. Fix T1–T18 first;
+use rhythm to catch what's left.
+
+**What actually creates variation** is having something specific to say. Uneven
+sentences are a *consequence* of real content — a precise number, a caveat, an
+aside, a change of mind mid-paragraph. Padding a draft with artificially short
+sentences produces staccato drama (T18), not humanity. Write the specifics and
+the rhythm follows.
+
+## Part 3.6: About AI detectors — what to tell a client, and what not to chase
+
+Persian writers, and Iranians writing in English, get caught by these tools
+disproportionately, so the facts matter:
+
+- A 2023 evaluation of 14 detection tools found **all scored under 80% accuracy,
+  and only 5 above 70%**; accuracy degrades further on paraphrased text.
+- **Non-native English writers are falsely flagged at an average rate of 61.3%**
+  in one study of seven detectors — a system that flags most second-language
+  writing as machine-written is not measuring what it claims to.
+- Reported false-positive rates run as high as 50% in journalistic testing, and
+  differ by writer demographic (20% for Black students vs 7% for white students
+  in one 2024 report).
+- Cambridge and other Russell Group universities, and UT Austin, withdrew from
+  Turnitin's AI detection over reliability concerns. Published authors have had
+  their own books flagged.
+
+Three practical consequences:
+
+1. **Never treat a detector score as evidence** — of your text or anyone's.
+   It is a probabilistic guess about style, not a finding about authorship.
+2. **Don't rewrite good Persian to please a tool.** Chasing a score pushes
+   writers toward deliberately clumsy prose, which is worse for the reader —
+   the only audience that matters.
+3. **If a client or institution raises a false flag**, the evidence above is the
+   answer: point to the measured false-positive rates for second-language
+   writers and to the institutions that abandoned these tools.
+
+**The boundary this skill holds.** Everything here is aimed at prose that is
+genuinely better — specific, varied, honest, in the right register. That is
+also, incidentally, prose that reads as human, because it is written like one.
+What this skill will not do is help misrepresent authorship: no invisible
+characters, no homoglyph substitution, no watermark stripping, no injected
+typos. Those tricks damage the text, help no reader, and in a context where
+disclosure is required — a thesis, a journal submission, a client contract, an
+employer's AI policy — the honest move is to follow that policy and say what
+was AI-assisted. Improving writing and hiding its origin are different jobs;
+this skill does the first.
 
 ## Part 4: Signs of human Persian (preserve these)
 

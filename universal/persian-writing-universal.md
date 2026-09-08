@@ -49,6 +49,8 @@ read the reference file for your output format before generating anything.
 | Any Persian prose (always) | the «Writing style: registers & de-AI-ing» part below |
 | Mechanical correctness (always) | the «Orthography (نگارش و رسم‌الخط)» part below |
 | Academic: paper, thesis, report, مقاله/پایان‌نامه | the «Academic writing (نگارش علمی)» part below |
+| Educational/technical content, docs, product pages, how-to | the «Content craft: POV, structure, honesty» part below |
+| Telegram, Instagram, captions, carousels, reels, stories | the «Social channels: Telegram & Instagram» part below |
 | SEO content, blog for search, landing/ad copy, کپشن فروش | the «SEO writing & copywriting» part below |
 | Cleanup/normalize/spell-check existing text (ویرایش، پاکسازی) | the Orthography part (script docs ship with the full package) |
 | Choosing/embedding fonts | the «Fonts» part below |
@@ -104,9 +106,29 @@ Full guide in the «Writing style: registers & de-AI-ing» part below. The core 
 3. **Ban the AI tells:** em dashes (—), rule-of-three triads (سریع، آسان و مطمئن),
    نه تنها ... بلکه, tacked-on «که نشان‌دهنده‌ی ... است», vague «کارشناسان معتقدند»,
    generic «در دنیای امروز» openers, «در نهایت می‌توان گفت» closers.
-4. **The native test:** would an Iranian screenshot this as «متن هوش مصنوعی»?
-   If yes, rewrite before delivering.
-5. **Numbers, punctuation, spacing** must be Persian — next section.
+4. **Hold one point of view.** Explain facts impersonally, address the reader
+   directly (the verb carries it — don't repeat «شما»), and use «ما» only for
+   what the organization actually did or is responsible for. Sliding between
+   the three inside one section is the most common flaw in Persian brand
+   content — content-structures.md §1.
+5. **Separate teaching from selling.** The explanation must be worth reading
+   without buying anything: state the problem before the product, never hide
+   the main answer, tie each feature to a checkable result, and never delete
+   limitations or prerequisites — they are what make the rest believable.
+6. **Claim only what the source supports.** Distinguish واقعیت / نظر /
+   پیش‌بینی / ادعا; never invent a statistic, version, price, or quote to fill
+   a section; surface contradictions instead of silently resolving them; ask
+   one question rather than guessing (content-structures.md §3).
+7. **The native test:** would an Iranian screenshot this as «متن هوش مصنوعی»?
+   If yes, rewrite before delivering. Two properties cause most of it:
+   *predictability* (the expected collocation every time — اهمیتِ ویژه، نقشِ
+   بسزا) and *uniformity* (every sentence 15–20 words, every paragraph the same
+   weight). Real specifics create real variation; `fa_lint.py --check --rhythm`
+   flags flat rhythm, but lexical tells matter far more — writing-style.md §3.5.
+   The goal is prose that is genuinely better, not prose tuned to a detector:
+   AI detectors are unreliable and falsely flag second-language writers at very
+   high rates, and this skill never helps disguise authorship (§3.6).
+8. **Numbers, punctuation, spacing** must be Persian — next section.
 
 ## Orthography: non-negotiables
 
@@ -118,6 +140,10 @@ Full rules in the «Orthography (نگارش و رسم‌الخط)» part below. 
 3. **Persian digits** ۰۱۲۳۴۵۶۷۸۹ inside Persian text. Latin digits stay in URLs,
    emails, codes, version numbers. Never Arabic-Indic ٤٥٦ forms.
 4. **Persian punctuation:** ، ؛ ؟ and «گیومه» for quotes. No space before, one after.
+4b. **هکسره** — never write the ezafe kasre as «ـه»: «کتابِ من»، not «کتابه من».
+   The «ـه» ending is only the colloquial «است» («این کتابه» = این کتاب است).
+   Test by substituting «است»; if the sentence breaks, you need a kasre.
+   Iranians treat this error as a mark of carelessness — orthography.md §5.1.
 5. **No em/en dashes** in Persian prose — use «،» or restructure.
 6. **Never letter-space Persian** (it breaks letter joining), never fake bold/italic.
 
@@ -193,10 +219,11 @@ Two gates. Check the .docx BEFORE converting (catches what code review can't),
 then check the PDF:
 
 ```bash
-# 1. DOCX: section bidi, per-paragraph coverage, jc=right traps, cs fonts,
-#    built-in list numbering, Arabic chars, template heading colors.
-#    --fix repairs missing <w:bidi/> in every section.
-python3 scripts/verify_docx.py output.docx --expect-font Vazirmatn --fix
+# 1. DOCX: package integrity FIRST (a file Word won't open can't be RTL-checked),
+#    then section bidi, jc=right traps, cs fonts, list numbering, heading colors.
+#    --fix repairs missing <w:bidi/>; --sanitize strips the Word-for-Mac template
+#    artifacts python-docx inherits (the classic "file is corrupt" fingerprint).
+python3 scripts/verify_docx.py output.docx --expect-font Vazirmatn --fix --sanitize
 
 # 2. PDF: fallback fonts, blank pages, template leaks, Arabic chars
 python3 the verify_pdf script (full package; chat-only AIs apply the equivalent rules manually) output.pdf --expect-font Vazirmatn
@@ -206,6 +233,12 @@ python3 the verify_pdf script (full package; chat-only AIs apply the equivalent 
 XML are different things: libraries drop `bidi` from section properties, and
 OOXML requires `<w:bidi/>` to be the FIRST child of `<w:sectPr>` — appended
 anywhere else, renderers ignore it. Verify the artifact, never the source code.
+
+It also guards the package itself: `[Content_Types].xml` must be the first ZIP
+entry, every relationship Target must resolve, every XML part must be
+well-formed and free of control characters. Repairs are written to a temp file
+and validated before replacing anything, so a failed repair can't destroy the
+document. Details and the already-corrupt-file procedure: docx-pdf.md §4.5.
 
 It checks: near-empty pages, "undefined"/template leaks, non-embedded or fallback
 fonts, Arabic ي/ك in extracted text, and page count. Fix every warning, regenerate,
@@ -335,6 +368,13 @@ For social/chat contexts, written Persian mirrors speech:
   strangers is rude; overusing formal شما forms with friends is cold.
 - **تعارف:** exists even casually («قابلی نداره»، «مخلصیم») but one beat of it.
   Don't stack three politeness rituals in a DM.
+- **هکسره — the error that undoes everything else.** Colloquial writing is
+  exactly where the «ـه» clitic (= است) lives, so it is also where writers
+  collide it with the ezafe kasre. «این کتابه» (this is a book) is right;
+  «کتابه من» is wrong and should be «کتابِ من». One هکسره in an Instagram
+  caption gets quoted back at the brand; it reads as carelessness, not casualness.
+  Test each one by swapping in «است»: if the sentence survives, «ـه» is correct.
+  Full rules and the wrong/right table: orthography.md §5.1.
 
 Consistency rule: don't mix میشه and می‌شود in the same piece. Pick the register
 and hold it. (Exception: quoting someone's speech inside formal text.)
@@ -344,7 +384,14 @@ user or their brief actually provides. Never invent stats, years of experience,
 client counts, partner names, or hashtags — an invented «۹۷٪ رضایت» or a brand
 hashtag the user never asked for damages trust more than a plain sentence. No
 facts available? Write generic-but-concrete claims and tell the user which
-blanks to fill.
+blanks to fill. The full discipline — separating واقعیت from نظر, پیش‌بینی and
+ادعا, and what to do with contradictory sources — is in content-structures.md §3.
+
+Point of view is a separate axis from register, and an easy one to get wrong:
+impersonal for facts and mechanisms, second person for what the reader does
+(the verb alone — repeating «شما» reads as translated English), «ما» only for
+the organization's own actions and responsibilities. See content-structures.md
+§1 for the full table; social-channels.md covers what changes per channel.
 
 ## Part 2: Persian AI tells — find and rewrite
 
@@ -386,7 +433,7 @@ Openers: در دنیای امروز، در عصر دیجیتال، امروزه 
 با کیفیتی بی‌رقیب. Specifics or silence.
 
 > ❌ تیم ما با تجربه‌ای بی‌نظیر، خدماتی منحصربه‌فرد ارائه می‌دهد.
-> ✅ در پنج سال گذشته ۴۰ سایت فروشگاهی راه انداخته‌ایم؛ سه‌تایشان الان روزی
+> ✅ در پنج سال گذشته ۴۰ پروژه تحویل داده‌ایم؛ سه‌تایشان الان روزی
 > هزار سفارش دارند.
 
 ### T7. Rule of three
@@ -460,6 +507,86 @@ brand names mid-Persian is fine, but no ALL-CAPS shouting.
   Forcing pure-Persian coinages (تارنما for سایت) sounds weirder than the loan.
 - **One همچنین, one خیلی, one exclamation** — isolated instances mean nothing.
   Look for clusters.
+
+## Part 3.5: Why machine prose reads flat — the underlying mechanism
+
+T1–T18 are symptoms. Two properties of how language models generate text
+explain most of them, and knowing the cause lets you fix cases the list doesn't
+name.
+
+**Predictability (perplexity).** A model picks, at each step, a highly probable
+next word. Do that thousands of times and every phrase becomes the expected
+one. In Persian this surfaces as the safe collocation every single time:
+«اهمیت» always arriving with «ویژه‌ای»، «نقش» with «بسزایی»، «تیم» with
+«مجرب». Nothing is wrong with any one of them; the tell is that no phrase ever
+surprises. A human writer, even a careful one, occasionally reaches for the
+less obvious word — and that irregularity is what reads as a person thinking.
+
+**Uniformity (burstiness).** Human writing varies: a 6-word sentence next to a
+30-word one, a two-line paragraph after a dense one, a section that runs long
+because the idea deserved it. Generated text clusters in a narrow band —
+sentences mostly 15–20 words, paragraphs of equal weight, sections of equal
+length, every list with the same number of items. The prose has no dynamics.
+
+Measured on the samples shipped with this skill: an AI-written services page
+scored 0.39 sentence-length variation with paragraphs all within 0.19 of each
+other, while its rewrite reached 0.65 with sentences from 2 to 27 words. Check
+your own draft with:
+
+```bash
+python3 the fa_lint script (full package; chat-only AIs apply the equivalent rules manually) --check --rhythm text.md
+```
+
+Read the output as an editor's nudge, not a verdict. Rhythm is a **secondary**
+signal: in that same comparison, the count of lexical tells went from 11 to 0,
+which is the change a reader actually feels. A text with perfect variance and
+«می‌باشد» in every paragraph still reads as machine-written. Fix T1–T18 first;
+use rhythm to catch what's left.
+
+**What actually creates variation** is having something specific to say. Uneven
+sentences are a *consequence* of real content — a precise number, a caveat, an
+aside, a change of mind mid-paragraph. Padding a draft with artificially short
+sentences produces staccato drama (T18), not humanity. Write the specifics and
+the rhythm follows.
+
+## Part 3.6: About AI detectors — what to tell a client, and what not to chase
+
+Persian writers, and Iranians writing in English, get caught by these tools
+disproportionately, so the facts matter:
+
+- A 2023 evaluation of 14 detection tools found **all scored under 80% accuracy,
+  and only 5 above 70%**; accuracy degrades further on paraphrased text.
+- **Non-native English writers are falsely flagged at an average rate of 61.3%**
+  in one study of seven detectors — a system that flags most second-language
+  writing as machine-written is not measuring what it claims to.
+- Reported false-positive rates run as high as 50% in journalistic testing, and
+  differ by writer demographic (20% for Black students vs 7% for white students
+  in one 2024 report).
+- Cambridge and other Russell Group universities, and UT Austin, withdrew from
+  Turnitin's AI detection over reliability concerns. Published authors have had
+  their own books flagged.
+
+Three practical consequences:
+
+1. **Never treat a detector score as evidence** — of your text or anyone's.
+   It is a probabilistic guess about style, not a finding about authorship.
+2. **Don't rewrite good Persian to please a tool.** Chasing a score pushes
+   writers toward deliberately clumsy prose, which is worse for the reader —
+   the only audience that matters.
+3. **If a client or institution raises a false flag**, the evidence above is the
+   answer: point to the measured false-positive rates for second-language
+   writers and to the institutions that abandoned these tools.
+
+**The boundary this skill holds.** Everything here is aimed at prose that is
+genuinely better — specific, varied, honest, in the right register. That is
+also, incidentally, prose that reads as human, because it is written like one.
+What this skill will not do is help misrepresent authorship: no invisible
+characters, no homoglyph substitution, no watermark stripping, no injected
+typos. Those tricks damage the text, help no reader, and in a context where
+disclosure is required — a thesis, a journal submission, a client contract, an
+employer's AI policy — the honest move is to follow that policy and say what
+was AI-assisted. Improving writing and hiding its origin are different jobs;
+this skill does the first.
 
 ## Part 4: Signs of human Persian (preserve these)
 
@@ -589,6 +716,48 @@ Write it explicitly only where the host word demands it:
 - After ا and و: صدای بلند، عموی من (the ی is mandatory)
 - Diacritic کسره (ِ) only for disambiguation in formal/educational text.
 
+### 5.1 هکسره — the error Iranians mock most
+
+Two different things sound identical at the end of a word, so writers swap them.
+Getting this wrong in public copy is the single fastest way to look careless:
+Iranians screenshot هکسره mistakes off billboards and brand accounts for sport.
+
+| | What it is | Written | Example |
+|---|---|---|---|
+| **کسره‌ی اضافه** | links a noun to what follows (ezafe) | kasre — usually left unwritten, never «ه» | کتابِ من / کتاب من |
+| **«ـه» clitic** | colloquial short form of «است» (predicate) | attached «ه» | این کتابه = این کتاب است |
+
+**The test that always works:** replace the ending with «است» and read it aloud.
+If the sentence still makes sense, the correct spelling is «ـه». If it turns to
+nonsense, you need a kasre (and usually write nothing at all).
+
+- «این کتابه» ← «این کتاب است» ✓ → «ـه» correct
+- «کتابه من» ← «کتاب است من» ✗ → ezafe needed: **کتابِ من** (or plain «کتاب من»)
+
+**Wrong → right:**
+
+| ❌ | ✅ | Why |
+|---|---|---|
+| کتابه من رو ندیدی؟ | کتابِ من رو ندیدی؟ | ezafe, not «است» |
+| کلاسه زبان می‌رم | کلاسِ زبان می‌رم | ezafe |
+| قیمته این محصول چنده؟ | قیمتِ این محصول چنده؟ | first is ezafe, second («چنده») is «است» ✓ |
+| سایته شرکت بالا نمیاد | سایتِ شرکت بالا نمیاد | ezafe |
+| هوا خیلی خوبِ | هوا خیلی خوبه | predicate «است» — the reverse error |
+| ماشینه من خرابه | ماشینِ من خرابه | ezafe first, «است» second ✓ |
+
+**Careful — these are NOT errors.** Many nouns simply end in ه, and they take a
+normal ezafe like any other word: خانه، نامه، برنامه، پروژه، مقاله، هفته، تجربه،
+شماره، بچه. «نامه شما رسید» and «پروژه‌ی شما» are both fine; nothing was swapped.
+
+**Register note:** the «ـه» clitic belongs to colloquial writing only. In formal
+or academic text write «است» in full — «این کتاب است»، not «این کتابه». So a
+formal document that contains «ـه» clitics has a register problem, not just an
+orthography one (see writing-style.md).
+
+the fa_lint script (full package; chat-only AIs apply the equivalent rules manually) --check` flags probable هکسره in both directions. It reports
+rather than auto-fixes, because only context decides which of two identical
+sounds the writer meant — and a wrong "fix" here changes the meaning.
+
 ## 6. Spacing hygiene
 
 - Exactly one space between words; no double spaces (common AI artifact).
@@ -620,7 +789,265 @@ Formal prose: one-word numbers under eleven often spelled out (سه پیشنها
 
 ---
 
-# PART 3 — Academic writing (نگارش علمی)
+# PART 3 — Content craft: POV, structure, honesty
+
+# Persian content craft: point of view, structure, and honesty
+
+Register (writing-style.md) decides *how formal* the text is. This file decides
+*who is speaking*, *in what order the ideas arrive*, and *what you are allowed
+to claim*. These are the disciplines that separate content a professional
+editorial team would publish from content that merely reads smoothly.
+
+Applies to educational articles, documentation, product and service pages,
+internal reference docs, and the long-form half of social content — in any
+field. The examples below use ordinary business situations on purpose: the
+same rules govern a clinic's patient guide, a law firm's explainer, a
+workshop's how-to, and a software company's release note.
+Channel-specific mechanics live in social-channels.md.
+
+## 1. Point of view — the most-broken rule in Persian content
+
+Most Persian brand content slips between «ما»، «شما» and impersonal narration
+inside a single paragraph. The result feels like a sales letter interrupting a
+tutorial. One rule fixes it:
+
+> **Explain the subject impersonally, teach the reader directly, and use "we"
+> only for what the organization actually did or is responsible for.**
+
+| Content type | Voice | Example |
+|---|---|---|
+| Fact, definition, cause, how a system behaves, advantage, limitation | Impersonal, subject-centred | «سفارش پس از تأیید پرداخت ثبت می‌شود.» |
+| A step the reader performs | Second person; the verb alone carries it | «در صفحه‌ی سفارش‌ها، گزینه‌ی ویرایش را انتخاب کنید.» |
+| The organization's own action, decision, policy, commitment, investigation | First person plural «ما» | «ما این محدودیت را در نسخه‌ی بعدی برطرف می‌کنیم.» |
+| How people in general behave | «کاربر» / third person | «کاربر معمولاً پیش از خرید، نظرات را می‌خواند.» |
+
+Supporting rules:
+
+- **Don't repeat «شما».** Persian verb endings already encode the person.
+  «شما می‌توانید فایل را حذف کنید» → «می‌توانید فایل را حذف کنید». Repetition
+  reads as translated-from-English.
+- **Don't switch POV inside a short section** without a reason. If a paragraph
+  starts impersonal, finishing it with «ما» makes the reader re-parse it.
+- **«شما باید» only for a real obligation with a real consequence.** Otherwise
+  it sounds bossy for no reason. «باید» earns its place when skipping the step
+  breaks something: «پیش از حذف، باید نسخه‌ی پشتیبان بگیرید؛ این عمل
+  برگشت‌پذیر نیست.»
+- A neutral explanation is not "cold". It is exactly what makes the reader
+  trust the later paragraph where you do speak as the organization.
+
+## 2. Education, product, and promotion
+
+The fastest way to destroy the credibility of educational content is to bend it
+toward a product halfway through. Keep the three separated:
+
+- **The teaching must be worth reading even for someone who never buys.**
+  If the article only works as a funnel, it is an ad wearing a tutorial's
+  clothes, and readers notice.
+- **Don't withhold the main answer.** Putting the actual answer behind a
+  signup, or delaying it to the last paragraph, is the fastest way to lose both
+  the reader and the ranking.
+- **Present the problem before the solution**, and the solution before the
+  product name.
+- **Introduce a product only where it genuinely solves the problem** being
+  discussed. Otherwise the mention is noise.
+- **Tie every feature to a use case and a checkable result.** «امکان ثبت
+  خودکار دارد» says nothing; «سفارش‌ها هر شب یک‌بار ثبت می‌شوند، پس در بدترین
+  حالت یک روز تأخیر دارید» says something the reader can act on.
+- **Never delete limitations, prerequisites, or conditions of use.** They are
+  the part of the text that proves the rest is honest.
+- **Don't present general industry knowledge as a proprietary advantage**, and
+  don't attack competitors — describe your own trade-offs instead.
+- **Don't repeat the brand or product name without reason.** Once the reader
+  knows whose text this is, repetition only reads as insecurity.
+
+## 3. Source fidelity and the four kinds of statement
+
+Content built on sources (documentation, reports, a client brief, research)
+must keep the distinction between what is known and what is guessed:
+
+| | Definition | How to write it |
+|---|---|---|
+| **واقعیت** | verifiable, in the source | state plainly |
+| **نظر** | someone's judgement | attribute it: «به گفته‌ی [نام یا نقش]...» |
+| **پیش‌بینی** | about the future | mark it: «انتظار می‌رود»، «احتمالاً» — never as settled fact |
+| **ادعا** | asserted, unverified | attribute and, where it matters, note it is unverified |
+
+Working rules:
+
+- **Never invent** a statistic, date, version number, price, company name,
+  quote, command, output, or comparison to fill a structural slot. An empty
+  section is honest; a fabricated one is a liability.
+- **If data is incomplete**, either write the sentence cautiously or drop it.
+- **If missing information blocks a correct answer**, ask one specific question
+  before writing rather than guessing.
+- **Don't hide contradictions between sources.** Either present the
+  contradiction explicitly, or leave the disputed point out entirely — but
+  never resolve it silently by picking the more convenient version.
+- **Volatile facts** (versions, prices, compatibility, limits, commands) should
+  not be stated as permanent without verification. Date them or hedge them.
+- **Preserve names, numbers, dates and amounts exactly** as the source has
+  them. Precision here is what earns the reader's trust everywhere else.
+
+## 4. General structure for educational content
+
+Use this order and delete any section that has nothing real to say:
+
+1. **عنوان** — names the subject, problem, or result. No clickbait, no
+   curiosity gaps.
+2. **طرح مسئله** — one or two sentences: what this is about and why it matters.
+   Cut the historical preamble and the «در دنیای امروز» opener entirely.
+3. **زمینه لازم** — only the concept or prerequisite the reader needs in order
+   to follow the solution. Not everything you know about the topic.
+4. **بدنه** — the substance, in whichever pattern fits (§5).
+5. **نتیجه‌ی مورد انتظار** — what changes if the reader does this, or what
+   decision they can now make.
+6. **محدودیت، استثنا، هشدار** — version, platform, condition, risk,
+   irreversible effect. Placed *next to the relevant step*, not collected in a
+   graveyard at the end.
+7. **جمع‌بندی** — compresses the answer or the decision criterion. Introduces
+   nothing new and does not restate the article.
+
+For a comprehensive article, the internal progression that works is:
+**تعریف → نحوه‌ی کار → کاربردها → اجزا یا ویژگی‌ها → مزایا و محدودیت‌ها →
+مقایسه → مخاطب مناسب → آموزش عملی → جمع‌بندی → پرسش‌های متداول.**
+General before specific; understanding before action.
+
+Three questions carry almost any explanatory piece: **«چیست؟»،
+«چگونه کار می‌کند؟»، «چه زمانی به کار می‌آید؟»** Answer a complex idea in one
+plain sentence first, then add the technical detail.
+
+## 5. Six body patterns
+
+Pick the one that matches the content; don't force everything into steps.
+
+**مرحله‌ای (procedure).** Prerequisites stated first. Steps numbered. One
+action per step. Exact path and option names. The expected result of each step.
+Warnings sit beside the step they concern, never at the end.
+
+**نکته‌ای (tips).** Each tip gets a short heading and its own paragraph. Order
+by importance, execution order, or logic — not randomly. Keep recommendations
+visibly separate from requirements.
+
+**مقایسه‌ای (comparison).** Define the options and the criteria first. Apply
+*the same* criteria to every option — usually some of: use case, resources,
+scalability, management effort, cost, stability, security, required expertise.
+**Conclude conditionally**: which option suits which situation. Declaring an
+absolute winner is almost always a sign the comparison was rigged. If two
+options are complementary rather than rival, say so and explain when to use
+both.
+
+**تعریف مفهوم (concept).** تعریف ساده → نحوه‌ی کار → کاربرد → مزیت و محدودیت
+→ مثال → زمان مناسب استفاده.
+
+**مسئله و راه‌حل (troubleshooting).** نشانه → علت‌های محتمل → بررسی از
+ساده‌ترین و کم‌ریسک‌ترین اقدام → راهکار → نتیجه‌ی مورد انتظار → نقطه‌ای که
+باید سراغ پشتیبانی یا متخصص رفت. Ordering diagnostics from cheapest and safest
+outward is what makes troubleshooting content actually usable.
+
+**معرفی محصول یا قابلیت.** نیاز → راهکار → کاربرد → مخاطب مناسب → قابلیت
+مرتبط → محدودیت و پیش‌نیاز → تفاوت با نزدیک‌ترین گزینه → مسیر بررسی بیشتر.
+Never open with adjectives; open with the need.
+
+## 6. Specialist terminology and proper names
+
+Applies to any field with its own vocabulary — medicine, law, finance,
+engineering, design, cooking — not just technology.
+
+- **Keep the term the field actually uses.** If practitioners and readers say
+  it in English (or in an established loanword), keep that form. Inventing an
+  unfamiliar Persian equivalent hurts comprehension more than the loanword
+  does; forcing a purist coinage nobody uses is a translation error, not
+  linguistic care.
+- **Explain on first use only**, with a plain Persian explanation in
+  parentheses, then use one fixed form for the rest of the text. Consistency
+  beats variety here — synonym-cycling a specialist term confuses readers and
+  is an AI tell (writing-style.md T18).
+- **Never translate official names**: product names, menu items, buttons,
+  options, form fields, legal titles, drug names, standards. Whatever the
+  reader will see in front of them is what the text must say, unchanged.
+- Keep the boundary between the official name and your Persian explanation
+  visible, so the reader knows which words to look for.
+- Write names, figures, units, dates and any codes consistently throughout —
+  mixed conventions make one text look like it had several authors.
+- Where a field uses commands, formulas, references or identifiers, present
+  them in a fixed format and keep them LTR when they're in Latin script
+  (html-css.md, docx-pdf.md).
+
+## 7. Clarity mechanics
+
+- Short-to-medium sentences, active verbs. Avoid stacking several independent
+  claims into one sentence.
+- One idea per paragraph; typically 2–5 sentences.
+- Keep chronological and logical order intact.
+- Cut redundant phrases, heavy nominalisation (اسم‌سازی: «انجام بررسی را به عمل
+  آورد» → «بررسی کرد»), ambiguous pronouns, and translationese.
+- Replace a vague phrase with the precise word.
+- Keep the text scannable on a phone — but scannable is not the same as
+  fragmented; don't chop prose into disconnected lines.
+
+## 8. Formatting discipline
+
+- **Bold** is for a heading, a key concept, a warning, or a critical result.
+  Bold as decoration destroys its own signal.
+- **Numbered lists = sequence. Bulleted lists = independent items.** Using a
+  numbered list for unordered things implies an order that doesn't exist.
+- Keep list items grammatically parallel, and merge lists that overlap.
+- Start each bullet with the concept name, then a colon and a short practical
+  explanation — but avoid turning an entire article into bold-header bullets
+  (writing-style.md T16). Prose carries argument; lists carry inventories.
+- Avoid long, nested, or repetitive bullets.
+- **Tables** for three or more options across fixed criteria. For two options,
+  a paragraph or short list is usually clearer.
+- Present advantages and limitations under separate, explicit labels.
+- Anything meant to be copied or typed exactly — a code snippet, a reference
+  number, a formula, an address — goes in code formatting and stays LTR when
+  it's Latin script (html-css.md, docx-pdf.md).
+- Keep heading hierarchy regular and headings self-explanatory: a reader
+  skimming only the headings should still learn the outline of the argument.
+
+## 9. Notes, warnings, and limits
+
+- **نکته** = supplementary information. **هشدار** = risk. **محدودیت** =
+  a condition or boundary on the result. Don't blur them.
+- State the consequence precisely: not «مراقب باشید» but «اگر این گزینه را
+  فعال کنید، آدرس‌های قبلی از کار می‌افتند».
+- Put the warning **next to the action it concerns**. A warning discovered
+  after the damage is decoration.
+- Examples earn their place only when they improve understanding or the
+  reader's decision. Keep them short, realistic, and matched to the audience.
+
+## 10. Conclusion and call to action
+
+- The conclusion states the answer, the decision criterion, or the next step.
+  It is not a summary of the text and not a brand slogan.
+- **One primary call to action**, only where it is the logical continuation of
+  the content. Name the destination and what happens there. No pressure, no
+  manufactured urgency.
+- Link to the most specific relevant page — the exact documentation page, not
+  the homepage — and say what the reader will find there.
+- For statistics, standards, security reports, and consequential claims, cite a
+  credible, primary, current source, and state the date, period, unit, and
+  context of the data.
+
+## 11. Pre-delivery checklist
+
+- Does every claim come from the source material or the brief?
+- Is the core definition clear near the beginning?
+- Does the text move from understanding → evaluation → action?
+- Is each term explained on first use, then used consistently?
+- Does every feature appear with its practical effect?
+- Are comparisons criteria-based and conclusions conditional?
+- Are steps, commands and prerequisites complete and mutually consistent?
+- Are repetition, exaggeration, unintended promotion, and invented detail gone?
+- Is the point of view consistent and correct per §1?
+- Is the deliverable the finished text only, with no internal labels
+  («مقدمه»، «بدنه»، «نسخه‌ی بازنویسی‌شده») left in the published output?
+
+
+
+---
+
+# PART 4 — Academic writing (نگارش علمی)
 
 # Persian academic writing (نگارش علمی فارسی)
 
@@ -673,13 +1100,13 @@ one paragraph raises the question the next answers.
 paragraphs. When information is genuinely a list, embed it:
 
 > ❌ مزایای این روش عبارتند از:
-> • کاهش زمان پردازش
+> • کاهش زمان اجرا
 > • کاهش هزینه
-> • مقیاس‌پذیری بهتر
+> • دقت بیشتر
 >
-> ✅ این روش سه مزیت عملی داشت: زمان پردازش هر درخواست از ۸ ثانیه به ۲ ثانیه
-> رسید، هزینه‌ی زیرساخت حدود ۳۰٪ کاهش یافت و معماری جدید بدون بازنویسی تا
-> ده برابر بارِ فعلی را تحمل می‌کند.
+> ✅ این روش سه مزیت عملی داشت: زمان اجرای هر آزمون از ۸ دقیقه به ۲ دقیقه
+> رسید، هزینه‌ی هر نمونه حدود ۳۰٪ کاهش یافت و خطای اندازه‌گیری از ۵٪ به ۲٪
+> رسید.
 
 **A3. Source-listing instead of synthesis.** «اسمیت (۲۰۱۸) روشی ارائه کرد...
 جانسون (۲۰۱۹) مدلی توسعه داد... براون (۲۰۲۰) بررسی کرد...» is an annotated
@@ -776,6 +1203,30 @@ cycling reads as AI *and* confuses reviewers.
 Note what changed: synthesis with a through-line, real numbers, Latin names
 left Latin, one hedge, no اولاً/ثانیاً, no می‌باشد, ends at the gap.
 
+## 9.5 AI assistance, disclosure, and detector accusations
+
+Academic work is where authorship claims carry the most weight, so two things
+need saying plainly.
+
+**Disclosure follows the institution's rule, not convenience.** Universities and
+journals differ: some permit AI assistance for language editing, some require a
+declaration, some prohibit it for substantive drafting. Find the actual policy
+(شیوه‌نامه‌ی دانشگاه، راهنمای نویسندگان مجله) and follow it. Writing help that
+is disclosed where disclosure is required stays honest; the same help concealed
+does not. This skill improves the writing — it does not launder authorship, and
+the techniques for disguising it (invisible characters, homoglyphs, injected
+errors) are not here and should not be sought elsewhere.
+
+**If a detector falsely flags a student's or researcher's work**, that is a
+documented and common failure, not proof of anything. Persian-speaking authors
+writing in English are hit hardest: one study of seven detectors measured a
+**61.3% average false-positive rate for non-native English writers**, a 2023
+evaluation of 14 tools found none reached 80% accuracy, and several major
+universities withdrew from these tools over reliability concerns. A score is a
+style guess, never evidence of authorship. Anyone facing such an accusation
+should present drafts, notes, version history and sources — the ordinary
+evidence of having done the work — rather than trying to satisfy the tool.
+
 ## 10. Checklist before delivering academic text
 
 1. Register: no می‌باشد/لازم به ذکر است; hedges single; تعارف zero.
@@ -793,7 +1244,273 @@ left Latin, one hedge, no اولاً/ثانیاً, no می‌باشد, ends at t
 
 ---
 
-# PART 4 — SEO writing & copywriting
+# PART 5 — Social channels: Telegram & Instagram
+
+# Persian social channels: Telegram, Instagram, and repurposing
+
+Channel craft, not channel decoration. Register comes from writing-style.md,
+structure and honesty from content-structures.md; this file adds what changes
+when the text is consumed on a phone, in a feed, in seconds.
+
+The formats and signatures here are patterns, not house style. Length caps,
+emoji conventions, and closing lines belong to whoever owns the channel — ask
+for theirs, and if none exists, the defaults below are safe.
+
+## 1. Rules shared by every channel
+
+- **One central topic per piece.** A post that covers two subjects gets read as
+  neither.
+- **The opening states the subject.** No greeting, no «در این پست می‌خواهیم...»,
+  no restating the title, no rhetorical question standing in for content.
+- **Never hide the answer to create suspense.** «تا آخر بخونید» is a tax on the
+  reader that costs more attention than it buys.
+- **Every paragraph carries one idea** and stays short enough to scan on a
+  phone — without becoming a stack of disconnected fragments.
+- **Critical information is never only in the image, only in the audio, or only
+  behind a link.** Each surface should stand on its own to the extent it can.
+- **Warnings go beside the relevant step**, not collected at the end or buried
+  in a caption.
+- **The closing gives the answer, the decision criterion, or the next step** —
+  not a slogan and not a summary of what was just said.
+- **One call to action**, with its destination and outcome named.
+- **Publish-ready output only.** Internal labels like «مقدمه»، «بدنه»،
+  «جمع‌بندی» are scaffolding for the writer, and must not survive into the
+  posted text.
+
+### Emoji — and why the first word after one matters in Persian
+
+Default to no emoji. Where a channel's style uses them, they are for **semantic
+separation**, not decoration: at most one (or one fixed combination) at the
+start of a block, used consistently for the same meaning throughout.
+
+There is also a genuinely technical reason to be careful. In an RTL paragraph,
+an emoji is direction-neutral, so the first *strong* character after it decides
+how the line is laid out. If a Latin word follows the emoji, the line can flip
+to LTR and the punctuation jumps to the wrong side. **Keep the first word after
+an emoji (and the first word of every paragraph) Persian**, or wrap the Latin
+fragment as described in html-css.md. This is the same bidi rule that governs
+Persian digits — orthography.md §3.
+
+A workable emoji scheme, if one is wanted: numbered markers for sequence
+(1️⃣ 2️⃣ 3️⃣), one consistent symbol family for risks and limits (🛑 ⚠️), another
+for benefits, results and conclusions (✅ 🟢). What matters is that a symbol
+means the same thing every time it appears.
+
+## 2. Telegram
+
+### Structure
+
+عنوان → شروع مستقیم → زمینه‌ی لازم → بدنه → نکته/محدودیت/هشدار → جمع‌بندی →
+اقدام یا لینک در صورت نیاز.
+
+Don't let a post become a truncated article, a compressed ad, or a loose pile
+of bullet points.
+
+**Title:** short, direct, matching the content. A question, a problem, a
+comparison, a guide, or an exact count of points («۴ نکته...»). Name the brand
+only when the brand or its product *is* the subject.
+
+**Opening:** one or two paragraphs establishing the problem, why it matters,
+where it applies, the misconception being corrected, or the outcome of reading.
+
+**Body:** use whichever pattern from content-structures.md §5 fits —
+step-by-step, tips, comparison, concept, troubleshooting, or product
+introduction. Each carries its own internal order.
+
+**Headings and lists:** in medium or long posts, use real subheadings.
+Numbered lists for sequence, bulleted for independent items. Bold only for
+headings, key concepts, warnings and results.
+
+### Length
+
+- **Short:** one definition, tip, warning, change, or answer.
+- **Medium:** a concept, a few criteria, a short comparison, a multi-step
+  procedure, or one capability.
+- **Long:** a full guide, troubleshooting, or multi-criteria comparison. If it
+  outgrows the format, split it into a series rather than compressing it.
+
+A practical ceiling many Persian tech channels use is roughly **۱۷۰۰ characters
+including spaces، ~۴۰۰ کلمه، ~۱۶ پاراگراف** — sized so the post is consumable on
+a single phone screen without endless scrolling. Treat it as a default, not a
+law; the channel owner's spec wins.
+
+### Common Telegram post types
+
+**آموزشی پرسش‌محور** — title as a question, numbered points, risks marked,
+benefits marked, a highlighted final result. A closing «تذکر مهم» block that
+names the *plausible but wrong* conclusions a reader might draw and corrects
+them is unusually valuable: it is where content earns trust rather than clicks.
+
+**اطلاعیه‌ی قابلیت جدید** — greeting (if the channel uses one) → clear headline
+→ short explanation of what it does → benefits or use cases as separate items →
+how to use it, in steps → link to official documentation.
+
+**خبر** — headline carrying the actual event → the news and its source, briefly
+→ details as separate items → practical implications or steps if any → source
+link → the misreading-correction block.
+
+**هشدار** — an imperative headline naming the required action → what happened,
+why it matters, and the source → the conditions that make a reader affected →
+required actions as ordered steps → source → misreading correction.
+
+For news and warnings especially: keep every fact traceable to the input
+sources, and never invent an ID, form, URL, or contact that wasn't given.
+
+### Links
+
+Keep every link from the source; create none. Give each link a clear title and
+attach the URL to that title as anchor text rather than pasting a long raw URL
+mid-sentence.
+
+## 3. Instagram
+
+Instagram content is not a shortened article. It is built for visual
+consumption, and the format is chosen from the content's shape:
+
+| Format | Use it for |
+|---|---|
+| **کاروسل** | several steps, tips, criteria, a comparison, or a gradual explanation |
+| **تک‌تصویر** | one definition, tip, warning, data point, or standalone message |
+| **اینفوگرافیک** | a set of data or components and the relationships between them |
+| **ریلز** | showing a process, an interface, movement, an example, before/after |
+| **استوری** | short, time-bound messages, reminders, links, feedback, quick sequences |
+
+One central topic per piece, one message per slide or frame, one clear
+takeaway per reel.
+
+**Hook:** the first slide, frame, or second must state the question, problem,
+difference, result, warning, or exact number of points. No vagueness, no fear
+bait, no exaggeration, no withheld answer.
+
+**General path:** هوک → زمینه‌ی ضروری → آموزش یا پاسخ → محدودیت یا هشدار →
+نتیجه → اقدام مرتبط در صورت نیاز.
+
+### Carousel
+
+کاور → اسلاید زمینه → اسلایدهای میانی → هشدار یا مثال → جمع‌بندی → CTA.
+
+- **Cover:** short direct title, one subject, visible value, understandable
+  *without* the caption. No paragraph, no extra promise.
+- **Context slide:** the problem, its importance, the misconception, the
+  audience, or the prerequisite — in the least space that works. Never a
+  restatement of the cover.
+- **Middle slides:** one definition, step, tip, criterion, cause, benefit,
+  limitation, comparison, example, or warning each. Title states the message;
+  body explains it.
+- **Never split a sentence across two slides.** Move secondary detail to the
+  caption instead.
+- Put an important warning on its own slide or next to the action it concerns —
+  not hidden in the caption.
+- Slide count follows complexity. If the content gets dense or very long, split
+  it into more than one post.
+
+### Reels
+
+هوک → مسئله → توضیح یا نمایش → مثال یا راهکار → محدودیت → جمع‌بندی → CTA.
+
+- Open directly with the subject; no greeting or long introduction.
+- One idea per sentence, one function per scene.
+- On-screen text and narration should complement each other, not duplicate.
+- Numbers, commands, option names, paths, warnings and the key result should
+  appear **on screen**, not only in audio.
+- Show interface steps slowly enough to follow, with the click target visible.
+- Assume the sound is off: subtitles matter, and the essential information must
+  survive muting.
+- End on the result, the decision criterion, or the next action.
+
+### Stories
+
+- **Single frame:** one message — عنوان/پیام → توضیح کوتاه → اقدام یا لینک.
+  Understandable at a glance; not several paragraphs.
+- **Sequence:** frame 1 the subject or question, frame 2 the context, middle
+  frames one point each, a limitation frame if needed, a final frame with the
+  result or action. Don't split sentences across frames or pad the count.
+- **Interactive stickers** are for gauging knowledge, identifying needs,
+  quizzes, collecting questions, or choosing a topic — single-subject question,
+  real options, and explain the correct answer afterwards. Never request
+  sensitive data.
+- **Before a link**, say where it goes and why it is relevant; send people to
+  the most specific page.
+
+### Captions and hashtags
+
+The caption complements the visual, it doesn't repeat it:
+جمله‌ی آغازین مشخص → زمینه → توضیح تکمیلی یا مراحل یا مثال → محدودیت →
+جمع‌بندی → CTA و منبع در صورت نیاز.
+
+Short paragraphs, one idea each. Don't put essential information only in the
+caption. Avoid generic openings and endings that carry no information.
+Hashtags: few, relevant, used for categorisation — not generic, repetitive, or
+promotional. Brand hashtags follow the brand's own fixed policy, if it has one.
+
+### Text on images and accessibility
+
+- Images, charts and screenshots must aid understanding, not decorate.
+- Text inside an image: short, hierarchical, large enough, high contrast, away
+  from the edges. Break lines by meaning, not to fill space.
+- Few fonts, few emphasis styles (fonts.md; and never letter-space Persian).
+- Provide subtitles for speech, alt text for images where the platform allows,
+  and explain charts in the caption.
+- Don't encode meaning in colour alone; avoid fast or flashing motion.
+
+## 4. Announcements and product introductions
+
+**Announcement (change, incident, event):** موضوع → زمان → دامنه‌ی اثر →
+وضعیت فعلی → اقدام انجام‌شده → اقدام لازم مخاطب → مسیر به‌روزرسانی.
+State incomplete information as incomplete, and announce a definite resolution
+time only when it is actually confirmed. Under-promising here is credibility;
+over-promising is a support ticket.
+
+**Product or capability introduction:** نیاز → راهکار → کاربرد → مخاطب مناسب →
+قابلیت مرتبط → محدودیت و پیش‌نیاز → تفاوت با نزدیک‌ترین گزینه → مسیر جزئیات.
+Verify price, capacity and any changeable condition before publishing, and
+don't let a purchase invitation replace the explanation of *who this is
+actually for*.
+
+## 5. Repurposing between formats
+
+Rewriting for the destination format, not copying into it:
+
+- **Telegram → carousel:** extract the core message, move secondary detail to
+  the caption, turn each section into an independent slide.
+- **Article → reel:** keep one sub-topic, one definition, one example, one
+  result — and rewrite the text for speech, which is a different rhythm than
+  prose.
+- **Carousel → story:** reduce the text and the number of messages. Never post
+  screenshots of the slides as stories.
+- **Article → Telegram:** keep the answer and the decision criteria; drop the
+  background the format has no room for, rather than compressing everything
+  uniformly into an unreadable block.
+
+In a series, keep the overall topic, the part number, and each part's own
+title — and make every part understandable without having seen the previous
+ones.
+
+## 6. Pre-publish checks
+
+**Telegram:** one central topic; accurate title; opening free of filler;
+logical structure; short paragraphs; clear steps; complete but not padded;
+claims current; limitations and sources present; problem-centred tone;
+result-oriented conclusion; no internal labels left in the text.
+
+**Instagram:** format matches the content and audience; subject clear
+immediately; hook precise and not misleading; one message per slide or frame in
+a logical order; on-image text short, legible, phone-appropriate; caption,
+narration and visual complementary with nothing essential dropped; claims,
+volatile facts, sources, limitations and warnings correct; content
+problem-centred rather than promotional; subtitles, contrast, element placement
+and chart explanations handled; the deliverable separated from internal notes.
+
+**Both:** run the text through the persian_cleanup script (full package; chat-only AIs apply the equivalent rules manually) --edit` and
+the fa_lint script (full package; chat-only AIs apply the equivalent rules manually) --check` before delivery — هکسره errors and broken
+نیم‌فاصله are the fastest way for a professional channel to look amateur
+(orthography.md §5.1).
+
+
+
+---
+
+# PART 6 — SEO writing & copywriting
 
 # Persian SEO writing & copywriting
 
@@ -1007,7 +1724,7 @@ carry genuinely unique content (no doorway clones)?
 
 ---
 
-# PART 5 — Fonts
+# PART 7 — Fonts
 
 # Persian fonts: catalog, pairing, embedding
 
@@ -1114,7 +1831,7 @@ after the fact, but checking first is cheaper.
 
 ---
 
-# PART 6 — Word/DOCX + PDF
+# PART 8 — Word/DOCX + PDF
 
 # Persian DOCX + PDF: RTL and pagination recipes
 
@@ -1526,6 +2243,64 @@ descenders clip in tight exact line heights.
 
 ---
 
+## 4.5 Package integrity — "Word says the file is corrupt"
+
+RTL correctness is worthless if Word refuses to open the file at all. A .docx is
+a ZIP of XML parts, and a few structural rules decide whether Office accepts it:
+
+| Requirement | Why it matters |
+|---|---|
+| `[Content_Types].xml` is the FIRST ZIP entry | Word may reject the package outright if it isn't |
+| Every part's extension declared in `[Content_Types].xml` | undeclared part = "unreadable content" |
+| Every `.rels` Target resolves to a real part | dangling relationship = repair prompt |
+| Every XML part well-formed, no control chars (<0x20 except tab/LF/CR) | one stray byte kills the whole document |
+| No duplicate part names | only the first wins; Word complains |
+
+**python-docx ships a Word-for-Mac-2011 template — verified, not folklore.**
+Every document created with `Document()` inherits these artifacts:
+
+```
+word/stylesWithEffects.xml            ← Mac-only part
+docProps/thumbnail.jpeg               ← often malformed
+xmlns:mo=... in document.xml          ← Mac namespace
+<Application>Microsoft Macintosh Word</Application>, <AppVersion>14.0000
+<?xml version='1.0' ...?>             ← single quotes, not Office's form
+```
+
+These usually open fine, but they are exactly the fingerprint found in files
+that Word reports as corrupt on Windows. For anything you hand to a client,
+clear them:
+
+```bash
+python3 scripts/verify_docx.py out.docx --fix --sanitize
+```
+
+`--sanitize` removes the stray parts, strips their references from
+`[Content_Types].xml` and the `.rels` files (leaving them would create dangling
+relationships — worse than the artifacts), and normalises the XML declarations.
+It re-validates afterwards and refuses to hand back a package it just broke.
+Measured on a real proposal: 17 parts → 15, content and RTL flags identical,
+PDF conversion still clean.
+
+**The nuclear option — LibreOffice round-trip.** LibreOffice parses leniently
+and re-serialises into a clean, Office-compliant package, which fixes most
+inherited corruption in one step:
+
+```bash
+soffice --headless --convert-to docx --outdir <OTHER_dir> input.docx
+```
+
+Input and output directories must differ, or soffice silently fails. Caveat:
+a round-trip re-renders styles, so re-run the RTL checks afterwards — it can
+also drop or alter formatting you set deliberately. Prefer `--sanitize` for
+files you generated; keep the round-trip for files that arrive already broken.
+
+**If a file is already corrupt**, work in this order: confirm it starts with the
+bytes `PK\x03\x04`; run `verify_docx.py` to name the defective part; try the
+LibreOffice round-trip; only then do manual surgery (rebuild the ZIP with
+`[Content_Types].xml` first, dropping the offending part and every reference to
+it). Never edit the user's original — always work on a copy.
+
 ## 5. Verification checklist (run every time)
 
 `python3 the verify_pdf script (full package; chat-only AIs apply the equivalent rules manually) output.pdf --expect-font Vazirmatn` automates
@@ -1723,7 +2498,7 @@ the verify_pdf script (full package; chat-only AIs apply the equivalent rules ma
 
 ---
 
-# PART 7 — PowerPoint
+# PART 9 — PowerPoint
 
 # Persian PowerPoint: RTL slides with python-pptx
 
@@ -1835,7 +2610,7 @@ bidi bugs in HTML pipelines show up as scrambled punctuation at line edges.
 
 ---
 
-# PART 8 — HTML / CSS / email
+# PART 10 — HTML / CSS / email
 
 # Persian HTML/CSS: RTL web pages, emails, and HTML→PDF
 
@@ -1977,7 +2752,7 @@ p { orphans: 2; widows: 2; }                   /* no lonely lines */
 
 ---
 
-# PART 9 — Images, reportlab PDFs, Excel
+# PART 11 — Images, reportlab PDFs, Excel
 
 # Persian patches for format-skill toolchains
 

@@ -16,7 +16,9 @@ OUT = ROOT / 'universal' / 'persian-writing-universal.md'
 PARTS = [
     ('writing-style.md',    'Writing style: registers & de-AI-ing'),
     ('orthography.md',      'Orthography (نگارش و رسم‌الخط)'),
+    ('content-structures.md', 'Content craft: POV, structure, honesty'),
     ('academic.md',         'Academic writing (نگارش علمی)'),
+    ('social-channels.md',  'Social channels: Telegram & Instagram'),
     ('seo-copywriting.md',  'SEO writing & copywriting'),
     ('fonts.md',            'Fonts'),
     ('docx-pdf.md',         'Word/DOCX + PDF'),

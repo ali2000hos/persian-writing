@@ -25,10 +25,25 @@ def read_parts(path):
 
 
 def write_parts(path, items):
+    """Rewrite the package. Two rules keep Word happy:
+    [Content_Types].xml must be the first entry, and nothing else may be
+    reordered or dropped. Writes to a temp file and only replaces the original
+    after the result opens cleanly, so a failed repair can't destroy the input.
+    """
     tmp = path + '.tmp'
+    names = list(items)
+    names.sort(key=lambda n: n != '[Content_Types].xml')   # Content_Types first
     with zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED) as out:
-        for n, d in items.items():
-            out.writestr(n, d)
+        for n in names:
+            out.writestr(n, items[n])
+    # sanity-gate the rewrite before it replaces anything
+    with zipfile.ZipFile(tmp) as check:
+        if check.testzip() is not None:
+            raise IOError('rewritten package failed CRC check; original left untouched')
+        if check.namelist()[0] != '[Content_Types].xml':
+            raise IOError('[Content_Types].xml is not the first entry; aborting')
+        if len(check.namelist()) != len(names):
+            raise IOError('part count changed during rewrite; aborting')
     shutil.move(tmp, path)
 
 
@@ -38,6 +53,143 @@ def force_section_bidi(items):
     patched, n = re.subn(r'(<w:sectPr[^>]*>)(?!<w:bidi/>)', r'\1<w:bidi/>', xml)
     items['word/document.xml'] = patched.encode('utf-8')
     return n
+
+
+# Parts python-docx inherits from its bundled Word-for-Mac-2011 template.
+# They are dead weight in a generated document and are the exact artifacts
+# blamed when Word reports "the file is corrupt".
+_MAC_ARTIFACTS = ('word/stylesWithEffects.xml', 'docProps/thumbnail.jpeg')
+
+
+def sanitize_package(items):
+    """Remove Mac-template artifacts and their references. Returns list of actions.
+
+    Order matters: drop the parts, then strip every reference to them from
+    [Content_Types].xml and the .rels files, or the result has dangling
+    relationships — which is worse than the artifacts were.
+    """
+    actions = []
+    removed = [p for p in _MAC_ARTIFACTS if p in items]
+    for p in removed:
+        del items[p]
+        actions.append(f'removed {p}')
+
+    if removed and '[Content_Types].xml' in items:
+        ct = items['[Content_Types].xml'].decode('utf-8')
+        before = ct
+        for p in removed:
+            ct = re.sub(r'<Override PartName="/' + re.escape(p) + r'"[^>]*/>', '', ct)
+        # thumbnail.jpeg may be covered by a Default extension rather than an Override
+        if 'docProps/thumbnail.jpeg' in removed and not any(
+                n.lower().endswith(('.jpeg', '.jpg')) for n in items):
+            ct = re.sub(r'<Default Extension="jpeg"[^>]*/>', '', ct)
+        if ct != before:
+            items['[Content_Types].xml'] = ct.encode('utf-8')
+            actions.append('cleaned [Content_Types].xml')
+
+    for name in list(items):
+        if not name.endswith('.rels'):
+            continue
+        rels = items[name].decode('utf-8')
+        before = rels
+        for p in removed:
+            target = p.split('/')[-1] if name.startswith('word/') else p
+            rels = re.sub(r'<Relationship[^>]*Target="[^"]*' + re.escape(target)
+                          + r'"[^>]*/>', '', rels)
+        if rels != before:
+            items[name] = rels.encode('utf-8')
+            actions.append(f'cleaned {name}')
+
+    # Normalise the python-docx single-quoted XML declaration to the Office form.
+    for name in list(items):
+        if name.endswith(('.xml', '.rels')):
+            data = items[name]
+            if data[:20].startswith(b"<?xml version='1.0'"):
+                items[name] = data.replace(b"<?xml version='1.0' encoding='UTF-8' standalone='yes'?>",
+                                           b'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>', 1)
+    if any(items[n][:20].startswith(b'<?xml version="1.0"') for n in items
+           if n.endswith('.xml')):
+        actions.append('normalised XML declarations to double quotes')
+    return actions
+
+
+def check_integrity(path):
+    """Structural validity of the OOXML package itself — the difference between
+    'Word opens it' and 'Word says the file is corrupt'. Run this before the
+    Persian/RTL checks: a file Word refuses to open can't be RTL-wrong yet."""
+    errors, warnings = [], []
+    with open(path, 'rb') as fh:
+        if fh.read(4) != b'PK\x03\x04':
+            return ([f'{path} is not a ZIP container — not a valid OOXML file'], [])
+    try:
+        z = zipfile.ZipFile(path)
+    except zipfile.BadZipFile as e:
+        return ([f'unreadable ZIP: {e}'], [])
+    names = z.namelist()
+    if z.testzip() is not None:
+        errors.append(f'CRC failure in part: {z.testzip()}')
+    if not names or names[0] != '[Content_Types].xml':
+        errors.append('[Content_Types].xml is not the first ZIP entry — '
+                      'Word may refuse the package as non-compliant')
+    dupes = {n for n in names if names.count(n) > 1}
+    if dupes:
+        errors.append(f'duplicate parts (only the first wins): {", ".join(sorted(dupes))}')
+
+    import xml.dom.minidom as minidom
+    for n in names:
+        if n.endswith(('.xml', '.rels')):
+            data = z.read(n)
+            try:
+                minidom.parseString(data)
+            except Exception as e:
+                errors.append(f'malformed XML in {n}: {str(e)[:80]}')
+                continue
+            ctrl = {b for b in data if b < 0x20 and b not in (9, 10, 13)}
+            if ctrl:
+                errors.append(f'{n} contains control characters '
+                              f'({", ".join(hex(c) for c in sorted(ctrl))}) — Word rejects these')
+            if b'\xef\xbf\xbd' in data:
+                warnings.append(f'{n} contains U+FFFD replacement chars — encoding was corrupted '
+                                f'somewhere upstream; Persian text may be damaged')
+
+    # every relationship Target must resolve to a real part
+    import posixpath
+    for n in names:
+        if n.endswith('.rels'):
+            base = n[:n.rfind('_rels/')]
+            for t in re.findall(rb'Target="([^"]+)"', z.read(n)):
+                t = t.decode('utf-8')
+                if t.startswith(('http://', 'https://', 'mailto:', '#', 'file:')):
+                    continue
+                cand = posixpath.normpath(posixpath.join(base, t)).lstrip('/')
+                if cand not in names and t.lstrip('/') not in names:
+                    errors.append(f'dangling relationship in {n}: Target="{t}" does not exist')
+
+    # every part must have a declared content type
+    if '[Content_Types].xml' in names:
+        ct = z.read('[Content_Types].xml').decode('utf-8', 'ignore')
+        exts = {e.lower() for e in re.findall(r'Extension="([^"]+)"', ct)}
+        overrides = set(re.findall(r'PartName="([^"]+)"', ct))
+        for n in names:
+            if n.endswith('/') or n == '[Content_Types].xml':
+                continue
+            ext = n.rsplit('.', 1)[-1].lower() if '.' in n else ''
+            if ext not in exts and '/' + n not in overrides:
+                errors.append(f'no content type declared for part: {n}')
+
+    # generator artifacts that make Word (especially on Windows) complain
+    for stray in ('word/stylesWithEffects.xml', 'docProps/thumbnail.jpeg'):
+        if stray in names:
+            warnings.append(f'stray part {stray} (Word-for-Mac artifact) — safe to remove; '
+                            f'a LibreOffice round-trip drops it')
+    if 'word/document.xml' in names:
+        body = z.read('word/document.xml')
+        # A declared-but-unused namespace is harmless; only flag prefixes in actual use.
+        for pfx in (b'mo', b'mv'):
+            if b'xmlns:' + pfx + b'=' in body[:400] and (b'<' + pfx + b':') in body:
+                warnings.append(f'Mac-only namespace {pfx.decode()}: is used in document.xml — '
+                                f'round-trip through LibreOffice to normalise')
+    return errors, warnings
 
 
 def check(path, expect_fonts):
@@ -142,16 +294,42 @@ def main():
     ap.add_argument('--expect-font', action='append', default=[])
     ap.add_argument('--fix', action='store_true',
                     help='insert missing <w:bidi/> into every <w:sectPr>, then re-check')
+    ap.add_argument('--sanitize', action='store_true',
+                    help='also strip python-docx Mac-template artifacts '
+                         '(stylesWithEffects, thumbnail, Mac namespaces)')
     args = ap.parse_args()
 
-    if args.fix:
+    # Structural validity first — an unopenable file has no RTL properties to judge.
+    ierr, iwarn = check_integrity(args.docx)
+    for w in iwarn:
+        print(f'WARN   {w}')
+    if ierr:
+        for e in ierr:
+            print(f'ERROR  {e}')
+        print('\nPackage is structurally invalid; Word will likely refuse it. '
+              'Repair first (a LibreOffice round-trip fixes most cases):\n'
+              f'  soffice --headless --convert-to docx --outdir <other_dir> {args.docx}\n'
+              'then re-run this check on the converted file.')
+        sys.exit(1)
+
+    if args.fix or args.sanitize:
         items = read_parts(args.docx)
-        n = force_section_bidi(items)
-        if n:
+        actions = []
+        if args.fix:
+            n = force_section_bidi(items)
+            actions.append(f'inserted <w:bidi/> into {n} <w:sectPr>' if n
+                           else 'section bidi already present')
+        if args.sanitize:
+            actions += sanitize_package(items) or ['no Mac-template artifacts found']
+        if any(not a.startswith(('section bidi already', 'no Mac-template')) for a in actions):
             write_parts(args.docx, items)
-            print(f'FIXED  inserted <w:bidi/> into {n} <w:sectPr>')
-        else:
-            print('nothing to fix: all sections already have <w:bidi/>')
+        for a in actions:
+            print(f'FIXED  {a}')
+        post, _ = check_integrity(args.docx)   # never hand back a broken file
+        if post:
+            for e in post:
+                print(f'ERROR  after repair: {e}')
+            sys.exit(1)
 
     errors, warnings, notes = check(args.docx, args.expect_font)
     for n in notes:

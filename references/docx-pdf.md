@@ -408,6 +408,64 @@ descenders clip in tight exact line heights.
 
 ---
 
+## 4.5 Package integrity — "Word says the file is corrupt"
+
+RTL correctness is worthless if Word refuses to open the file at all. A .docx is
+a ZIP of XML parts, and a few structural rules decide whether Office accepts it:
+
+| Requirement | Why it matters |
+|---|---|
+| `[Content_Types].xml` is the FIRST ZIP entry | Word may reject the package outright if it isn't |
+| Every part's extension declared in `[Content_Types].xml` | undeclared part = "unreadable content" |
+| Every `.rels` Target resolves to a real part | dangling relationship = repair prompt |
+| Every XML part well-formed, no control chars (<0x20 except tab/LF/CR) | one stray byte kills the whole document |
+| No duplicate part names | only the first wins; Word complains |
+
+**python-docx ships a Word-for-Mac-2011 template — verified, not folklore.**
+Every document created with `Document()` inherits these artifacts:
+
+```
+word/stylesWithEffects.xml            ← Mac-only part
+docProps/thumbnail.jpeg               ← often malformed
+xmlns:mo=... in document.xml          ← Mac namespace
+<Application>Microsoft Macintosh Word</Application>, <AppVersion>14.0000
+<?xml version='1.0' ...?>             ← single quotes, not Office's form
+```
+
+These usually open fine, but they are exactly the fingerprint found in files
+that Word reports as corrupt on Windows. For anything you hand to a client,
+clear them:
+
+```bash
+python3 scripts/verify_docx.py out.docx --fix --sanitize
+```
+
+`--sanitize` removes the stray parts, strips their references from
+`[Content_Types].xml` and the `.rels` files (leaving them would create dangling
+relationships — worse than the artifacts), and normalises the XML declarations.
+It re-validates afterwards and refuses to hand back a package it just broke.
+Measured on a real proposal: 17 parts → 15, content and RTL flags identical,
+PDF conversion still clean.
+
+**The nuclear option — LibreOffice round-trip.** LibreOffice parses leniently
+and re-serialises into a clean, Office-compliant package, which fixes most
+inherited corruption in one step:
+
+```bash
+soffice --headless --convert-to docx --outdir <OTHER_dir> input.docx
+```
+
+Input and output directories must differ, or soffice silently fails. Caveat:
+a round-trip re-renders styles, so re-run the RTL checks afterwards — it can
+also drop or alter formatting you set deliberately. Prefer `--sanitize` for
+files you generated; keep the round-trip for files that arrive already broken.
+
+**If a file is already corrupt**, work in this order: confirm it starts with the
+bytes `PK\x03\x04`; run `verify_docx.py` to name the defective part; try the
+LibreOffice round-trip; only then do manual surgery (rebuild the ZIP with
+`[Content_Types].xml` first, dropping the offending part and every reference to
+it). Never edit the user's original — always work on a copy.
+
 ## 5. Verification checklist (run every time)
 
 `python3 scripts/verify_pdf.py output.pdf --expect-font Vazirmatn` automates

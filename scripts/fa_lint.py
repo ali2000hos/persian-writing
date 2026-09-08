@@ -59,6 +59,71 @@ TANVIN_NEEDED = {'لطفا': 'لطفاً', 'حتما': 'حتماً', 'واقعا
 FA_B_L = r'(?<![؀-ۿ‌])'   # Persian-aware word boundaries
 FA_B_R = r'(?![؀-ۿًٌٍَُِّ‌])'
 
+# ---------- هکسره detection ----------
+# Persian's most-mocked writing error: confusing the ezafe kasre (کتابِ من) with
+# the colloquial clitic «ـه» that stands for «است» (این کتابه = این کتاب است).
+# They sound identical, so writers swap them. Detection has to be contextual:
+# «کتابه» ending a clause is correct; «کتابه من» is the error.
+
+_HE_NOUNS = set("""خانه خونه نامه برنامه هفته پروژه مدرسه نقشه جمعه قهوه بچه شنبه دقیقه
+ثانیه پنجره اندازه سفره کوچه میوه لحظه جمله مرحله نتیجه مقاله هزینه گزینه نمونه زمینه
+دسته بسته پوشه شبکه حوزه دوره چهره سلیقه علاقه سابقه تجربه قطعه منطقه فاصله مجموعه
+موسسه مسئله مساله وسیله هدیه اجاره اداره اشاره ستاره کناره ساده آماده ایده شماره
+اجازه انگیزه اندیشه ترانه بهانه نشانه خاطره پرونده آینده گذشته رابطه ضابطه قاعده
+مبادله معامله محاسبه مطالعه مراجعه مصاحبه مقایسه مناقصه مزایده""".split())
+
+_PRON = r'(?:من|تو|ما|شما|او|اون|ایشون|اونا|اینا|خودم|خودت|خودش|این|آن)'
+
+_DICT_RANK_FA: dict = {}
+
+
+def _load_ranks():
+    """Load the bundled frequency-ordered word list (rank = line number)."""
+    global _DICT_RANK_FA
+    if _DICT_RANK_FA:
+        return _DICT_RANK_FA
+    import os
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                        'assets', 'persian_words.txt')
+    if os.path.isfile(path):
+        with open(path, encoding='utf-8') as fh:
+            for i, line in enumerate(fh):
+                w = line.strip()
+                if w and w not in _DICT_RANK_FA:
+                    _DICT_RANK_FA[w] = i
+    return _DICT_RANK_FA
+
+
+def find_hekasre(text):
+    """Return [(matched_text, suggestion, tier)] for probable هکسره errors.
+
+    Tier A (high confidence): «Xه» is not a word at all while «X» is, and it sits
+    before another word — so the ه can only be a misplaced ezafe.
+    Tier B (medium): «Xه» exists but is far rarer than «X», and a pronoun follows.
+    Precision is favoured over recall: a lint that cries wolf gets ignored.
+    """
+    rank = _load_ranks()
+    INF = 10 ** 9
+    if not rank:
+        return []
+    r = lambda w: rank.get(w, INF)
+    out = []
+    for m in re.finditer(r'(?<![‌آ-ی])([آ-ی]{2,})ه\s+([آ-ی]{2,})', text):
+        stem, nxt = m.group(1), m.group(2)
+        whole = stem + 'ه'
+        if whole in _HE_NOUNS or r(stem) == INF:
+            continue
+        if r(whole) == INF:
+            out.append((m.group(0), f'{stem}ِ {nxt}', 'A'))
+    for m in re.finditer(r'(?<![‌آ-ی])([آ-ی]{2,})ه\s+(' + _PRON + r')(?![آ-ی])', text):
+        stem, nxt = m.group(1), m.group(2)
+        whole = stem + 'ه'
+        if whole in _HE_NOUNS or r(stem) == INF or r(whole) == INF:
+            continue
+        if r(whole) > r(stem) * 3 and r(whole) > 20000:
+            out.append((m.group(0), f'{stem}ِ {nxt}', 'B'))
+    return out
+
 def fix_safe(text):
     # Arabic characters → Persian
     for a, p in ARABIC_MAP.items():
@@ -145,6 +210,15 @@ def check_remaining(text):
         for m in re.finditer(r'\b(می‌گردد|می‌گردند|گردید(?:ه است)?|گردیدند)\b', line):
             record('bureaucratic-verb', i, line,
                    f'{m.group(0)}: fossil register — use می‌شود/شد (unless گردیدن = چرخیدن)')
+        for hit, fix, tier in find_hekasre(line):
+            conf = 'likely' if tier == 'A' else 'possible'
+            record('hekasre', i, line,
+                   f'«{hit}» → «{fix}» ({conf} هکسره: ezafe kasre written as ـه)')
+        # reverse هکسره: explicit kasre where the «است» clitic belongs
+        for m in re.finditer(r'([آ-ی]{2,})ِ\s*(?=[.!؟\n]|$)', line):
+            record('hekasre', i, line,
+                   f'«{m.group(0).strip()}» ends a clause with a kasre — predicate «است» '
+                   f'is written «{m.group(1)}ه» (خوبه), not with ـِ')
         if re.search(r'(?<=[' + PERSIAN + r'])\s*[,;?]|[,;?]\s*(?=[' + PERSIAN + r'])', line):
             record('latin-punct', i, line, 'Latin ,;? in Persian context → ، ؛ ؟')
         for a in ARABIC_MAP:
@@ -165,6 +239,58 @@ def check_remaining(text):
                 record('latin-digits', i, line, f'{tok}: Persian digits in Persian prose (or --digits)')
                 break
 
+def rhythm_report(text):
+    """Editorial hints about sentence rhythm — NOT an AI-detector score.
+
+    Measured on real Persian samples: an AI-sounding page and its humanised
+    rewrite scored CV 0.39 vs 0.65, so uniform sentence length is a genuine
+    (if secondary) symptom of machine-flat prose. The decisive signal is always
+    the lexical/rhetorical tells the linter already reports; treat rhythm as a
+    prompt to reread, never as a verdict on authorship.
+    """
+    import statistics as stats
+    fa_sents = [s.strip() for s in re.split(r'[.!?؟\n]+', re.sub(r'[#*>`]', ' ', text))
+                if len(s.strip().split()) >= 2 and re.search(FA_LETTER, s)]
+    lengths = [len(s.split()) for s in fa_sents]
+    out = []
+    if len(lengths) < 8:
+        return [('too-short', f'{len(lengths)} sentences — rhythm needs ~8+ to mean anything')]
+    mean = stats.mean(lengths)
+    cv = stats.pstdev(lengths) / mean if mean else 0
+    short = sum(1 for x in lengths if x < 8)
+    long_ = sum(1 for x in lengths if x > 25)
+    out.append(('measured', f'{len(lengths)} sentences | mean {mean:.1f} words | '
+                            f'variation {cv:.2f} | range {min(lengths)}–{max(lengths)}'))
+    if cv < 0.35:
+        out.append(('uniform-rhythm',
+                    f'variation {cv:.2f} is low — sentences sit in a narrow band, which is '
+                    f'what makes prose feel machine-flat. Break one long sentence in two, '
+                    f'or let one land short.'))
+    if short == 0:
+        out.append(('no-short-sentence',
+                    'no sentence under 8 words. A short one after a long one is how Persian '
+                    'prose breathes and where emphasis comes from.'))
+    if long_ == 0 and mean < 20:
+        out.append(('no-long-sentence',
+                    'every sentence is short-to-medium. One longer, flowing sentence adds '
+                    'range — uniformity in either direction reads as generated.'))
+    starts = [s.split()[0] for s in fa_sents if s.split()]
+    if starts and len(set(starts)) < len(starts) * 0.6:
+        rep = max(set(starts), key=starts.count)
+        out.append(('repeated-openings',
+                    f'sentences repeat their opening word ("{rep}" ×{starts.count(rep)}). '
+                    f'Vary how sentences begin.'))
+    paras = [p for p in text.split('\n\n') if len(p.split()) > 15]
+    if len(paras) >= 4:
+        plen = [len(p.split()) for p in paras]
+        pcv = stats.pstdev(plen) / stats.mean(plen)
+        if pcv < 0.2:
+            out.append(('uniform-paragraphs',
+                        f'paragraphs are all about the same size ({pcv:.2f} variation) — '
+                        f'real sections differ in weight because real ideas do.'))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('files', nargs='+', help="files to process, or '-' for stdin")
@@ -173,6 +299,9 @@ def main():
     mode.add_argument('--fix', action='store_true', help='apply safe fixes in place')
     ap.add_argument('--aggressive', action='store_true', help='with --fix: riskier fixes too')
     ap.add_argument('--digits', action='store_true', help='with --fix: ASCII → Persian digits')
+    ap.add_argument('--rhythm', action='store_true',
+                    help='report sentence-rhythm hints (uniform length, missing short/long '
+                         'sentences, repeated openings) — editorial guidance, not a score')
     args = ap.parse_args()
 
     exit_code = 0
@@ -208,6 +337,10 @@ def main():
 
         header = f'== {path}: {len(ISSUES)} {label} =='
         print(header, file=sys.stderr)
+        if args.rhythm:
+            print('  -- rhythm (editorial hints, not an authorship score) --', file=sys.stderr)
+            for kind, msg in rhythm_report(text):
+                print(f'    [{kind}] {msg}', file=sys.stderr)
         by_kind = {}
         for kind, ln, snip, sug in ISSUES:
             by_kind.setdefault(kind, []).append((ln, snip, sug))

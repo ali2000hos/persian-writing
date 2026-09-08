@@ -14,7 +14,7 @@ description: >
   like فارسی, Farsi, Persian, Iran, RTL, راست‌چین, نیم‌فاصله, ویرایش, مقاله,
   پایان‌نامه, سئو, کپشن, Vazirmatn — even if the user never mentions this skill.
 metadata:
-  version: 1.0.2
+  version: 1.3.0
 license: MIT (bundled fonts under SIL OFL)
 compatibility: >
   Any agent that reads Markdown skills (Claude, Claude Code, Cursor, Codex,
@@ -44,6 +44,8 @@ read the reference file for your output format before generating anything.
 | Any Persian prose (always) | `references/writing-style.md` |
 | Mechanical correctness (always) | `references/orthography.md` |
 | Academic: paper, thesis, report, مقاله/پایان‌نامه | `references/academic.md` |
+| Educational/technical content, docs, product pages, how-to | `references/content-structures.md` |
+| Telegram, Instagram, captions, carousels, reels, stories | `references/social-channels.md` |
 | SEO content, blog for search, landing/ad copy, کپشن فروش | `references/seo-copywriting.md` |
 | Cleanup/normalize/spell-check existing text (ویرایش، پاکسازی) | `references/cleanup/paknevis-rules.md` + `usage-patterns.md` |
 | Choosing/embedding fonts | `references/fonts.md` |
@@ -99,9 +101,29 @@ Full guide in `references/writing-style.md`. The core moves:
 3. **Ban the AI tells:** em dashes (—), rule-of-three triads (سریع، آسان و مطمئن),
    نه تنها ... بلکه, tacked-on «که نشان‌دهنده‌ی ... است», vague «کارشناسان معتقدند»,
    generic «در دنیای امروز» openers, «در نهایت می‌توان گفت» closers.
-4. **The native test:** would an Iranian screenshot this as «متن هوش مصنوعی»?
-   If yes, rewrite before delivering.
-5. **Numbers, punctuation, spacing** must be Persian — next section.
+4. **Hold one point of view.** Explain facts impersonally, address the reader
+   directly (the verb carries it — don't repeat «شما»), and use «ما» only for
+   what the organization actually did or is responsible for. Sliding between
+   the three inside one section is the most common flaw in Persian brand
+   content — content-structures.md §1.
+5. **Separate teaching from selling.** The explanation must be worth reading
+   without buying anything: state the problem before the product, never hide
+   the main answer, tie each feature to a checkable result, and never delete
+   limitations or prerequisites — they are what make the rest believable.
+6. **Claim only what the source supports.** Distinguish واقعیت / نظر /
+   پیش‌بینی / ادعا; never invent a statistic, version, price, or quote to fill
+   a section; surface contradictions instead of silently resolving them; ask
+   one question rather than guessing (content-structures.md §3).
+7. **The native test:** would an Iranian screenshot this as «متن هوش مصنوعی»?
+   If yes, rewrite before delivering. Two properties cause most of it:
+   *predictability* (the expected collocation every time — اهمیتِ ویژه، نقشِ
+   بسزا) and *uniformity* (every sentence 15–20 words, every paragraph the same
+   weight). Real specifics create real variation; `fa_lint.py --check --rhythm`
+   flags flat rhythm, but lexical tells matter far more — writing-style.md §3.5.
+   The goal is prose that is genuinely better, not prose tuned to a detector:
+   AI detectors are unreliable and falsely flag second-language writers at very
+   high rates, and this skill never helps disguise authorship (§3.6).
+8. **Numbers, punctuation, spacing** must be Persian — next section.
 
 ## Orthography: non-negotiables
 
@@ -113,6 +135,10 @@ Full rules in `references/orthography.md`. These six apply to every deliverable:
 3. **Persian digits** ۰۱۲۳۴۵۶۷۸۹ inside Persian text. Latin digits stay in URLs,
    emails, codes, version numbers. Never Arabic-Indic ٤٥٦ forms.
 4. **Persian punctuation:** ، ؛ ؟ and «گیومه» for quotes. No space before, one after.
+4b. **هکسره** — never write the ezafe kasre as «ـه»: «کتابِ من»، not «کتابه من».
+   The «ـه» ending is only the colloquial «است» («این کتابه» = این کتاب است).
+   Test by substituting «است»; if the sentence breaks, you need a kasre.
+   Iranians treat this error as a mark of carelessness — orthography.md §5.1.
 5. **No em/en dashes** in Persian prose — use «،» or restructure.
 6. **Never letter-space Persian** (it breaks letter joining), never fake bold/italic.
 
@@ -188,10 +214,11 @@ Two gates. Check the .docx BEFORE converting (catches what code review can't),
 then check the PDF:
 
 ```bash
-# 1. DOCX: section bidi, per-paragraph coverage, jc=right traps, cs fonts,
-#    built-in list numbering, Arabic chars, template heading colors.
-#    --fix repairs missing <w:bidi/> in every section.
-python3 scripts/verify_docx.py output.docx --expect-font Vazirmatn --fix
+# 1. DOCX: package integrity FIRST (a file Word won't open can't be RTL-checked),
+#    then section bidi, jc=right traps, cs fonts, list numbering, heading colors.
+#    --fix repairs missing <w:bidi/>; --sanitize strips the Word-for-Mac template
+#    artifacts python-docx inherits (the classic "file is corrupt" fingerprint).
+python3 scripts/verify_docx.py output.docx --expect-font Vazirmatn --fix --sanitize
 
 # 2. PDF: fallback fonts, blank pages, template leaks, Arabic chars
 python3 scripts/verify_pdf.py output.pdf --expect-font Vazirmatn
@@ -201,6 +228,12 @@ python3 scripts/verify_pdf.py output.pdf --expect-font Vazirmatn
 XML are different things: libraries drop `bidi` from section properties, and
 OOXML requires `<w:bidi/>` to be the FIRST child of `<w:sectPr>` — appended
 anywhere else, renderers ignore it. Verify the artifact, never the source code.
+
+It also guards the package itself: `[Content_Types].xml` must be the first ZIP
+entry, every relationship Target must resolve, every XML part must be
+well-formed and free of control characters. Repairs are written to a temp file
+and validated before replacing anything, so a failed repair can't destroy the
+document. Details and the already-corrupt-file procedure: docx-pdf.md §4.5.
 
 It checks: near-empty pages, "undefined"/template leaks, non-embedded or fallback
 fonts, Arabic ي/ك in extracted text, and page count. Fix every warning, regenerate,
@@ -219,6 +252,8 @@ persian-writing/
 │   ├── orthography.md          ← ZWNJ, characters, digits, punctuation, ezafe
 │   ├── cleanup/                ← paknevis rules, davat API, usage patterns
 │   ├── fonts.md                ← catalog, personalities, pairings, embedding
+│   ├── content-structures.md   ← POV, education vs promotion, body patterns
+│   ├── social-channels.md      ← Telegram/Instagram craft, repurposing
 │   ├── seo-copywriting.md      ← Persian SEO writing + کپی‌رایتینگ
 │   ├── docx-pdf.md             ← RTL docx recipes, pagination, PDF post-processing
 │   ├── pptx.md                 ← RTL PowerPoint via python-pptx / html2pptx
