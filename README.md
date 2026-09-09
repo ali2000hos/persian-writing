@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/banner.png" alt="persian-writing — فارسی، روان‌تر" width="100%">
+</p>
+
 # persian-writing
 
 **نگارش فارسی حرفه‌ای برای هوش مصنوعی — Professional Persian (Farsi) writing & RTL documents for any AI**
