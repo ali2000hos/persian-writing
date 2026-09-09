@@ -53,8 +53,11 @@ verification. Bundled Vazirmatn and Lalezar fonts (SIL OFL).
   summarizes, references specify.
 - After editing SKILL.md or any reference, regenerate the universal file:
   `python3 scripts/build_universal.py`.
-- Bump `version:` in SKILL.md frontmatter and `.claude-plugin/plugin.json`
-  together.
+- Bump the version in all FOUR places together, or they drift apart:
+  `SKILL.md` frontmatter (`version:`), `.claude-plugin/plugin.json`
+  (`"version"`), `scripts/persian_cleanup.py` (`__version__`), and the
+  Version history list in `README.md`. Verify with:
+  `grep -rn '__version__\|"version"\|version:' SKILL.md .claude-plugin scripts`
 - Keep wording harness-neutral; name specific tools as examples, not limits.
 - Keep the package brand-free: no company names, no real client stats,
   placeholder colors only.

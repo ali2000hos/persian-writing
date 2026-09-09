@@ -80,7 +80,7 @@ references/              writing-style, orthography, content-structures, academi
                          social-channels, seo-copywriting, fonts, docx-pdf, pptx,
                          html-css, format-skills-fa, cleanup/
 scripts/                 persian_cleanup, fa_lint, verify_docx, verify_pdf,
-                         install_fonts, download_fonts, build_universal
+                         check_version, install_fonts, download_fonts, build_universal
 assets/                  fonts (TTF) + 453K-word dictionary
 universal/               single-file edition for chat-only AIs
 .claude-plugin/          Claude Code plugin manifests

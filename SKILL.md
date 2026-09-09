@@ -270,6 +270,7 @@ persian-writing/
 │   ├── fa_lint.py              ← LINT: report issues needing contextual judgment
 │   ├── verify_docx.py          ← DOCX RTL checks (+ --fix for section bidi)
 │   ├── verify_pdf.py           ← post-generation PDF checks
+│   ├── check_version.py        ← verify the version matches in all four places
 │   ├── install_fonts.sh        ← bundled fonts → ~/.fonts (run before PDF export)
 │   └── download_fonts.py       ← fetch extra families (needs GitHub access)
 └── assets/
