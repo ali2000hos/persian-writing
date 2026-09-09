@@ -92,6 +92,13 @@ After editing SKILL.md or references, regenerate the single-file edition:
 
 ## Version history
 
+- **1.3.5** — fixed a silent structure-destroying bug: `persian_cleanup.py --edit`
+  used `\s` in its punctuation-spacing rules, and since `\s` matches newlines, a
+  sentence-ending period followed by a blank line collapsed into one line. Running
+  it on a Markdown file merged paragraphs and folded lists into prose. Both rules
+  now use `[ \t]`, a trailing newline is preserved, and the behaviour is verified
+  against a real reference file (line count, blank lines, headings and table rows
+  all unchanged). Repo banner added.
 - **1.3.0** — the mechanism behind AI-sounding prose (predictability and uniformity),
   measured on the bundled samples, plus `fa_lint.py --rhythm` for sentence-rhythm
   hints; evidence on AI-detector unreliability and its heavy bias against

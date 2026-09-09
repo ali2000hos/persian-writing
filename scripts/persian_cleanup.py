@@ -175,8 +175,12 @@ _ELLIPSIS_COLLAPSE = re.compile(r"\u2026{2,}")          # ……… → …
 _REPEATED_PUNCT = re.compile(r"([!?؟])\1+")
 
 # Extra spaces around punctuation: "hello ? world" → "hello? world"
-_PUNCT_SPACE_BEFORE = re.compile(r"\s+([!?؟:;,؛،.])")
-_PUNCT_SPACE_AFTER_DOT = re.compile(r"([،؛:!؟.])\s{2,}")
+# Punctuation spacing is a WITHIN-LINE concern: use [ \t], never \s.
+# \s matches newlines, so "پایان.\n\nشروع" would collapse to "پایان. شروع" —
+# merging paragraphs and destroying Markdown structure (lists, headings, code
+# fences). That silent damage is worse than the spacing it fixes.
+_PUNCT_SPACE_BEFORE = re.compile(r"[ \t]+([!?؟:;,؛،.])")
+_PUNCT_SPACE_AFTER_DOT = re.compile(r"([،؛:!؟.])[ \t]{2,}")
 
 # Multiple consecutive spaces (preserve newlines)
 _MULTI_SPACE = re.compile(r"[ \t]{2,}")
@@ -417,9 +421,14 @@ def remove_extra_spaces(text: str) -> str:
     """Collapse multiple spaces/tabs into one. Preserve newlines."""
     text = _MULTI_SPACE.sub(" ", text)
     # Trim trailing spaces at end of each line
-    text = re.sub(r" +\n", "\n", text)
-    # Trim leading/trailing whitespace per the whole string
+    text = re.sub(r"[ \t]+\n", "\n", text)
+    # Trim surrounding blank space, but keep one trailing newline if the input
+    # had one: files normally end with a newline, and dropping it shows up as a
+    # spurious diff in every version-controlled document the tool touches.
+    ends_with_newline = text.endswith("\n")
     text = text.strip()
+    if ends_with_newline:
+        text += "\n"
     return text
 
 

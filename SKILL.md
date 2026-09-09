@@ -14,7 +14,7 @@ description: >
   like فارسی, Farsi, Persian, Iran, RTL, راست‌چین, نیم‌فاصله, ویرایش, مقاله,
   پایان‌نامه, سئو, کپشن, Vazirmatn — even if the user never mentions this skill.
 metadata:
-  version: 1.3.0
+  version: 1.3.5
 license: MIT (bundled fonts under SIL OFL)
 compatibility: >
   Any agent that reads Markdown skills (Claude, Claude Code, Cursor, Codex,
@@ -151,6 +151,12 @@ python3 scripts/persian_cleanup.py --edit --in text.md --out text.md
 #    fake tanvin, register issues) — fix these by hand
 python3 scripts/fa_lint.py --check text.md
 ```
+
+`--edit` is line-structure preserving: blank lines, headings, lists, tables and
+code fences survive it, so running it on a Markdown or structured file is safe.
+It still rewrites text inside those structures, so keep the file in version
+control (or diff the result) when the document matters — the tool is careful,
+not omniscient.
 
 `persian_cleanup.py` is a full toolkit (paknevis + davat merged): aggressive
 cleaning for NLP (`--preset persian`), single functions (`--fn convert_digits`),
