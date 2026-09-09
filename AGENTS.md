@@ -63,3 +63,11 @@ verification. Bundled Vazirmatn and Lalezar fonts (SIL OFL).
   placeholder colors only.
 - Run `python3 scripts/fa_lint.py --check` on any Persian example text you
   add to the docs — the skill must pass its own linter.
+- When documentation intentionally shows an invalid Persian form, mark the
+  following line with `<!-- fa-lint-ignore-next-line -->`. Do not use `--fix`
+  on intentional error examples.
+
+- The Persian linter must not report Unicode codepoint notation such as
+  `U+06CC`, `U+200C`, or `U+066A` as Latin digits. Codepoint notation may
+  appear inside Markdown punctuation or table cells, so detection must work
+  when the notation is part of a larger token.

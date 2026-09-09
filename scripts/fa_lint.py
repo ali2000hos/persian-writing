@@ -161,7 +161,9 @@ def fix_aggressive(text):
     return text
 
 def _skip_token(tok):
-    """Tokens whose digits must stay Latin: URLs, emails, paths, versions, code."""
+    """Tokens whose digits must stay Latin or are Unicode codepoint notation."""
+    if re.search(r'U\+[0-9A-Fa-f]{4,6}(?:\.\.)?', tok):
+        return True
     return bool(re.search(r'https?://|www\.|@|[/\\]|\.[a-z]{2,}|`', tok)
                 or re.fullmatch(r'\+?\d+(\.\d+)+[.,;،]?', tok))   # versions like 6.5
 
@@ -186,8 +188,25 @@ TANVIN_FA = {'گاهاً': 'گاهی', 'گاها': 'گاهی', 'دوماً': 'د
              'سوماً': 'سوم اینکه / ثالثاً', 'ناچاراً': 'به‌ناچار', 'زباناً': 'به زبان',
              'تلفناً': 'تلفنی', 'خواهشاً': 'خواهش می‌کنم'}
 
+def _lint_ignored_lines(text):
+    """Return line numbers suppressed by fa-lint directives."""
+    lines = text.split('\n')
+    ignored = set()
+
+    for i, line in enumerate(lines):
+        if '<!-- fa-lint-ignore-next-line -->' in line:
+            if i + 1 < len(lines):
+                ignored.add(i + 2)
+
+    return ignored
+
+
 def check_remaining(text):
+    ignored_lines = _lint_ignored_lines(text)
+
     for i, line in enumerate(text.split('\n'), 1):
+        if i in ignored_lines:
+            continue
         if not re.search(FA_LETTER, line):
             continue
         for ch, name in [('—', 'em dash'), ('–', 'en dash')]:
@@ -219,7 +238,9 @@ def check_remaining(text):
             record('hekasre', i, line,
                    f'«{m.group(0).strip()}» ends a clause with a kasre — predicate «است» '
                    f'is written «{m.group(1)}ه» (خوبه), not with ـِ')
-        if re.search(r'(?<=[' + PERSIAN + r'])\s*[,;?]|[,;?]\s*(?=[' + PERSIAN + r'])', line):
+        # Report ASCII punctuation only when it separates Persian text.
+        # Do not flag English prose that contains an isolated Persian character.
+        if re.search(r'[' + PERSIAN + r']\s*[,;?]\s*[' + PERSIAN + r']', line):
             record('latin-punct', i, line, 'Latin ,;? in Persian context → ، ؛ ؟')
         for a in ARABIC_MAP:
             if a in line:
@@ -232,8 +253,11 @@ def check_remaining(text):
             record('zwnj-tar', i, line, 'comparative تر/ترین: use ZWNJ (بزرگ‌تر)')
         if re.search(r'"[^"\n]*' + FA_LETTER, line):
             record('quotes', i, line, 'straight quotes around Persian → «گیومه»')
-        # ASCII digits touching Persian words (not urls/emails/versions/code)
-        for tok in line.split():
+        # ASCII digits touching Persian words (not urls/emails/versions/code).
+        # Markdown heading/list markers are structure, not prose.
+        digit_line = re.sub(r'^\s{0,3}#{1,6}\s+\d+[.)]\s+', '', line)
+        digit_line = re.sub(r'^\s*\d+[.)]\s+', '', digit_line)
+        for tok in digit_line.split():
             if (re.search(r'[0-9]', tok) and re.search(FA_LETTER, line)
                     and not _skip_token(tok)):
                 record('latin-digits', i, line, f'{tok}: Persian digits in Persian prose (or --digits)')
@@ -329,9 +353,15 @@ def main():
             label = 'remaining (need manual/contextual fixes)'
         else:
             check_remaining(text)
-            # also surface what --fix WOULD change
-            fixed = fix_safe(text)
-            if fixed != text:
+            # Also surface what --fix WOULD change, but respect lint suppressions.
+            ignored_lines = _lint_ignored_lines(text)
+            fixable_lines = [
+                '' if i in ignored_lines else line
+                for i, line in enumerate(text.split('\n'), 1)
+            ]
+            fixable_text = '\n'.join(fixable_lines)
+            fixed = fix_safe(fixable_text)
+            if fixed != fixable_text:
                 record('fixable', 0, '(multiple)', 'safe auto-fixes available: rerun with --fix')
             label = 'issues'
 
