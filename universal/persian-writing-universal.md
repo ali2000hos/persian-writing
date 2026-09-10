@@ -157,11 +157,14 @@ python3 the persian_cleanup script (full package; chat-only AIs apply the equiva
 python3 the fa_lint script (full package; chat-only AIs apply the equivalent rules manually) --check text.md
 ```
 
-`--edit` is line-structure preserving: blank lines, headings, lists, tables and
-code fences survive it, so running it on a Markdown or structured file is safe.
-It still rewrites text inside those structures, so keep the file in version
-control (or diff the result) when the document matters — the tool is careful,
-not omniscient.
+`--edit` is safe on structured files. Fenced code blocks, inline code and table
+rows are lifted out before processing and restored byte-identical, and leading
+indentation is never collapsed. This matters because Persian typography rules
+are correct for prose and destructive in code: they would turn `"text"` into
+`«text»`, rewrite ASCII digits as Persian, and flatten the spacing a table's
+columns rely on. Pass `protect_code=False` (Python API) only if you truly want
+those rules applied everywhere. Keep the file in version control either way —
+the tool is careful, not omniscient.
 
 `persian_cleanup.py` is a full toolkit (paknevis + davat merged): aggressive
 cleaning for NLP (`--preset persian`), single functions (`--fn convert_digits`),

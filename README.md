@@ -92,6 +92,13 @@ After editing SKILL.md or references, regenerate the single-file edition:
 
 ## Version history
 
+- **1.3.6** — `--edit` no longer damages structured files. Code fences, inline
+  code and table rows are now lifted out before the typographic pass and
+  restored unchanged, and leading indentation is preserved. Previously the
+  Persian rules ran over everything: straight quotes inside a code block became
+  «guillemets» (breaking the code), ASCII digits became Persian, and collapsing
+  runs of spaces flattened both indentation and table alignment. Verified across
+  four real reference files and nine edge cases; the pass is idempotent.
 - **1.3.5** — fixed a silent structure-destroying bug: `persian_cleanup.py --edit`
   used `\s` in its punctuation-spacing rules, and since `\s` matches newlines, a
   sentence-ending period followed by a blank line collapsed into one line. Running

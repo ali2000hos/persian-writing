@@ -14,7 +14,7 @@ description: >
   like فارسی, Farsi, Persian, Iran, RTL, راست‌چین, نیم‌فاصله, ویرایش, مقاله,
   پایان‌نامه, سئو, کپشن, Vazirmatn — even if the user never mentions this skill.
 metadata:
-  version: 1.3.5
+  version: 1.3.6
 license: MIT (bundled fonts under SIL OFL)
 compatibility: >
   Any agent that reads Markdown skills (Claude, Claude Code, Cursor, Codex,
@@ -152,11 +152,14 @@ python3 scripts/persian_cleanup.py --edit --in text.md --out text.md
 python3 scripts/fa_lint.py --check text.md
 ```
 
-`--edit` is line-structure preserving: blank lines, headings, lists, tables and
-code fences survive it, so running it on a Markdown or structured file is safe.
-It still rewrites text inside those structures, so keep the file in version
-control (or diff the result) when the document matters — the tool is careful,
-not omniscient.
+`--edit` is safe on structured files. Fenced code blocks, inline code and table
+rows are lifted out before processing and restored byte-identical, and leading
+indentation is never collapsed. This matters because Persian typography rules
+are correct for prose and destructive in code: they would turn `"text"` into
+`«text»`, rewrite ASCII digits as Persian, and flatten the spacing a table's
+columns rely on. Pass `protect_code=False` (Python API) only if you truly want
+those rules applied everywhere. Keep the file in version control either way —
+the tool is careful, not omniscient.
 
 `persian_cleanup.py` is a full toolkit (paknevis + davat merged): aggressive
 cleaning for NLP (`--preset persian`), single functions (`--fn convert_digits`),

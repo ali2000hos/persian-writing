@@ -80,7 +80,7 @@ from typing import Callable, Iterable, List, Optional, Sequence, Union
 # Constants
 # ---------------------------------------------------------------------------
 
-__version__ = "1.3.5"  # keep in sync with SKILL.md and .claude-plugin/plugin.json
+__version__ = "1.3.6"  # keep in sync with SKILL.md and .claude-plugin/plugin.json
 
 # Zero-Width Non-Joiner (نیم‌فاصله) — the heart of Persian typography
 ZWNJ = "\u200c"
@@ -184,6 +184,61 @@ _PUNCT_SPACE_AFTER_DOT = re.compile(r"([،؛:!؟.])[ \t]{2,}")
 
 # Multiple consecutive spaces (preserve newlines)
 _MULTI_SPACE = re.compile(r"[ \t]{2,}")
+
+# ---------------------------------------------------------------------------
+# Protected regions
+# ---------------------------------------------------------------------------
+# Typographic rules are correct for prose and wrong for code. Straight quotes
+# become «guillemets», ASCII digits become Persian, runs of spaces collapse —
+# all of which silently break a code block, a command, or a table's alignment.
+# So the editorial pass lifts those regions out, processes the prose that is
+# left, and puts them back byte-identical.
+#
+# Placeholders use private-use codepoints and Latin letters only: no digits
+# (convert_digits would rewrite them), no Persian or ASCII punctuation (the
+# other rules would rewrite those).
+_PROTECT_OPEN = ""
+_PROTECT_CLOSE = ""
+
+# Fenced code first — it can legitimately contain ` and | characters.
+_FENCED_CODE = re.compile(r"^[ \t]*(`{3,}|~{3,})[^\n]*\n(?:.*?\n)??[ \t]*\1[^\n]*$",
+                          re.MULTILINE | re.DOTALL)
+_TABLE_ROW = re.compile(r"^[ \t]*\|.*$", re.MULTILINE)
+_INLINE_CODE = re.compile(r"`[^`\n]+`")
+
+
+def _encode_index(i: int) -> str:
+    """Index → letters only (no digits, which convert_digits would rewrite)."""
+    s = ""
+    i += 1
+    while i:
+        i, r = divmod(i - 1, 26)
+        s = chr(ord("A") + r) + s
+    return s
+
+
+def protect_regions(text: str):
+    """Replace code fences, table rows and inline code with placeholders.
+
+    Returns (masked_text, tokens). Restore with restore_regions().
+    """
+    tokens: List[str] = []
+
+    def _stash(m):
+        tokens.append(m.group(0))
+        return f"{_PROTECT_OPEN}{_encode_index(len(tokens) - 1)}{_PROTECT_CLOSE}"
+
+    for pattern in (_FENCED_CODE, _TABLE_ROW, _INLINE_CODE):
+        text = pattern.sub(_stash, text)
+    return text, tokens
+
+
+def restore_regions(text: str, tokens: Sequence[str]) -> str:
+    """Put the protected regions back exactly as they were."""
+    for i, original in enumerate(tokens):
+        text = text.replace(
+            f"{_PROTECT_OPEN}{_encode_index(i)}{_PROTECT_CLOSE}", original)
+    return text
 
 # Collapsed-letter pattern: عااااللللیییی → عالی (3+ repeats → 1)
 _REPEATED_LETTER = re.compile(r"(.)\1{2,}")
@@ -419,9 +474,15 @@ def strip_characters(text: str, keep: Union[str, Sequence[str]] = "fa") -> str:
 
 def remove_extra_spaces(text: str) -> str:
     """Collapse multiple spaces/tabs into one. Preserve newlines."""
-    text = _MULTI_SPACE.sub(" ", text)
-    # Trim trailing spaces at end of each line
-    text = re.sub(r"[ \t]+\n", "\n", text)
+    # Collapse runs of spaces INSIDE each line, but never the leading indent:
+    # indentation carries meaning (nested lists, indented code, YAML), and
+    # flattening it silently reshapes the document.
+    lines = []
+    for line in text.split("\n"):
+        indent = re.match(r"[ \t]*", line).group(0)
+        body = _MULTI_SPACE.sub(" ", line[len(indent):]).rstrip()
+        lines.append(indent + body if body else "")
+    text = "\n".join(lines)
     # Trim surrounding blank space, but keep one trailing newline if the input
     # had one: files normally end with a newline, and dropping it shows up as a
     # spurious diff in every version-controlled document the tool touches.
@@ -795,18 +856,31 @@ EDITOR_STEPS = [
 ]
 
 
-def edit_persian(text: str, do_spellcheck: bool = False) -> str:
+def edit_persian(text: str, do_spellcheck: bool = False,
+                 protect_code: bool = True) -> str:
     """Paknevis-style editorial pass. Conservative — preserves all content
     (links, mentions, hashtags, emojis all stay) but fixes typography:
     ZWNJ placement, Arabic→Persian chars, digits, punctuation, ezafe,
     ellipsis, repeated marks, extra spaces.
 
+    With `protect_code=True` (the default), fenced code blocks, inline code
+    and table rows are lifted out before processing and restored afterwards.
+    Persian typography rules are right for prose and wrong for code: they turn
+    "quotes" into «quotes», ASCII digits into Persian ones, and collapse the
+    spacing that a table's columns depend on. Set it False only when you
+    genuinely want those rules applied to everything.
+
     If `do_spellcheck=True`, also runs the spell-checker at the end.
     """
+    tokens: Sequence[str] = ()
+    if protect_code:
+        text, tokens = protect_regions(text)
     for step in EDITOR_STEPS:
         text = step(text)
     if do_spellcheck:
         text = spellcheck(text)
+    if protect_code:
+        text = restore_regions(text, tokens)
     return text
 
 
