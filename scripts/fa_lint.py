@@ -77,15 +77,31 @@ _PRON = r'(?:من|تو|ما|شما|او|اون|ایشون|اونا|اینا|خو
 _DICT_RANK_FA: dict = {}
 
 
+def _resolve_dictionary():
+    """Locate the single bundled word list.
+
+    Delegates to persian_cleanup so both scripts agree on where the dictionary
+    lives; falls back to the repo layout if that module is not importable.
+    """
+    import os, sys
+    here = os.path.dirname(os.path.abspath(__file__))
+    if here not in sys.path:
+        sys.path.insert(0, here)
+    try:
+        from persian_cleanup import resolve_dictionary_path
+        return resolve_dictionary_path()
+    except Exception:
+        path = os.path.join(os.path.dirname(here), 'assets', 'persian_words.txt')
+        return path if os.path.isfile(path) else None
+
+
 def _load_ranks():
     """Load the bundled frequency-ordered word list (rank = line number)."""
     global _DICT_RANK_FA
     if _DICT_RANK_FA:
         return _DICT_RANK_FA
-    import os
-    path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                        'assets', 'persian_words.txt')
-    if os.path.isfile(path):
+    path = _resolve_dictionary()
+    if path:
         with open(path, encoding='utf-8') as fh:
             for i, line in enumerate(fh):
                 w = line.strip()
@@ -142,8 +158,11 @@ def fix_safe(text):
     text = re.sub(r'(?<=[' + PERSIAN + r'])\s*\?', '؟', text)
     text = re.sub(r'(?<=[' + PERSIAN + r'])\s*,\s*(?=[' + PERSIAN + r'])', '، ', text)
     text = re.sub(r'(?<=[' + PERSIAN + r'])\s*;\s*(?=[' + PERSIAN + r'])', '؛ ', text)
-    # spacing hygiene: no space before Persian punctuation, one after
-    text = re.sub(r' +([،؛؟!])', r'\1', text)
+    # Spacing hygiene: no space before Persian punctuation, one after.
+    # The space must belong to a WORD, not to Markdown structure: a bullet
+    # «- ! ...», a table cell «| ؟ |» or an indent are separators, and gluing
+    # the mark to them («-!») silently breaks the document's structure.
+    text = re.sub(r'(?<=[\w)\]»"\'])[ \t]+([،؛؟!])', r'\1', text)
     text = re.sub(r'([،؛])(?=[' + PERSIAN + r'])', r'\1 ', text)
     # double spaces (not at line start = keep markdown indents)
     text = re.sub(r'(?<=\S)  +(?=\S)', ' ', text)
@@ -160,8 +179,18 @@ def fix_aggressive(text):
     text = re.sub(r'"([^"\n]*' + FA_LETTER + r'[^"\n]*)"', r'«\1»', text)
     return text
 
+_CODEPOINT = re.compile(r'U\+[0-9A-Fa-f]{4,6}(?:\.\.)?')
+
 def _skip_token(tok):
-    """Tokens whose digits must stay Latin: URLs, emails, paths, versions, code."""
+    """Tokens whose digits must stay Latin, or that are codepoint notation.
+
+    Unicode codepoint notation (U+06CC, U+200C, U+066A) is metalanguage, not
+    prose: converting its digits would destroy the thing being named. It can
+    appear glued to Markdown punctuation or inside a table cell, so match it
+    anywhere in the token rather than as the whole token.
+    """
+    if _CODEPOINT.search(tok):
+        return True
     return bool(re.search(r'https?://|www\.|@|[/\\]|\.[a-z]{2,}|`', tok)
                 or re.fullmatch(r'\+?\d+(\.\d+)+[.,;،]?', tok))   # versions like 6.5
 
@@ -186,13 +215,89 @@ TANVIN_FA = {'گاهاً': 'گاهی', 'گاها': 'گاهی', 'دوماً': 'د
              'سوماً': 'سوم اینکه / ثالثاً', 'ناچاراً': 'به‌ناچار', 'زباناً': 'به زبان',
              'تلفناً': 'تلفنی', 'خواهشاً': 'خواهش می‌کنم'}
 
+IGNORE_NEXT = '<!-- fa-lint-ignore-next-line -->'
+IGNORE_START = '<!-- fa-lint-ignore-start -->'
+IGNORE_END = '<!-- fa-lint-ignore-end -->'
+
+def _lint_ignored_lines(text):
+    """Line numbers suppressed by an explicit fa-lint directive.
+
+    Documentation has to show wrong forms in order to teach them: a table of
+    «کتابه من ✗ → کتابِ من ✓» must contain the error. Without a way to say so,
+    the skill can never pass its own linter, and a linter its own author
+    ignores is a linter nobody runs.
+
+    Two forms, because this skill's docs are largely Wrong/Right tables and
+    marking every row one at a time buries the content in directives:
+
+        <!-- fa-lint-ignore-next-line -->     one line
+        <!-- fa-lint-ignore-start -->  …  <!-- fa-lint-ignore-end -->
+    """
+    lines = text.split('\n')
+    ignored = set()
+    in_block = False
+    for i, line in enumerate(lines):
+        if IGNORE_START in line:
+            in_block = True
+        elif IGNORE_END in line:
+            in_block = False
+        elif in_block:
+            ignored.add(i + 1)
+        elif IGNORE_NEXT in line and i + 1 < len(lines):
+            ignored.add(i + 2)
+    return ignored
+
+def _preserve_ignored(original, fixed):
+    """Restore suppressed lines after a fix pass.
+
+    Without this, `--fix` silently repairs the error examples it was told to
+    leave alone: the row «| ی U+06CC | ي U+064A |» loses the Arabic ي that is
+    the whole point of the row. Fixes still run over the full text, so no rule
+    changes behaviour; only the marked lines are put back.
+    """
+    ignored = _lint_ignored_lines(original)
+    if not ignored:
+        return fixed
+    old, new = original.split('\n'), fixed.split('\n')
+    if len(old) != len(new):
+        return fixed          # line count moved; mapping would be guesswork
+    return '\n'.join(old[i - 1] if i in ignored else new[i - 1]
+                     for i in range(1, len(new) + 1))
+
+def _is_fa_word(word):
+    """A word written in Persian script and not part of a Latin token."""
+    return bool(word) and bool(re.search(FA_LETTER, word)) and not re.search(r'[A-Za-z]', word)
+
+def _is_fa_dominant(line):
+    """True when the line is Persian prose rather than English quoting Persian."""
+    fa = len(re.findall(FA_LETTER, line))
+    latin = len(re.findall(r'[A-Za-z]', line))
+    return fa > latin
+
+def _neighbours(line, idx, length=1):
+    """The whitespace-delimited words immediately left and right of a mark."""
+    left = line[:idx].split()
+    right = line[idx + length:].split()
+    return (left[-1] if left else ''), (right[0] if right else '')
+
 def check_remaining(text):
+    ignored = _lint_ignored_lines(text)
     for i, line in enumerate(text.split('\n'), 1):
+        if i in ignored:
+            continue
         if not re.search(FA_LETTER, line):
             continue
+        # Dashes are flagged only INSIDE Persian prose. In a bilingual document
+        # an em dash usually joins a term to its gloss («ZWNJ — نیم‌فاصله») or
+        # sits in an English sentence that happens to quote one Persian word;
+        # both are correct English typography. Requiring Persian on both sides
+        # targets the actual fault without forcing the English prose to degrade.
         for ch, name in [('—', 'em dash'), ('–', 'en dash')]:
-            if ch in line:
-                record('dash', i, line, f'{name}: replace with «،»/«؛»/() or restructure')
+            for m in re.finditer(re.escape(ch), line):
+                left, right = _neighbours(line, m.start())
+                if _is_fa_word(left) and _is_fa_word(right):
+                    record('dash', i, line, f'{name}: replace with «،»/«؛»/() or restructure')
+                    break
         if 'ة' in line:
             record('arabic-teh', i, line, 'ة: use ه/هٔ unless quoting Arabic')
         for m in ATTACHED_MI.finditer(line):
@@ -219,8 +324,17 @@ def check_remaining(text):
             record('hekasre', i, line,
                    f'«{m.group(0).strip()}» ends a clause with a kasre — predicate «است» '
                    f'is written «{m.group(1)}ه» (خوبه), not with ـِ')
-        if re.search(r'(?<=[' + PERSIAN + r'])\s*[,;?]|[,;?]\s*(?=[' + PERSIAN + r'])', line):
-            record('latin-punct', i, line, 'Latin ,;? in Persian context → ، ؛ ؟')
+        # Latin punctuation counts as an error when a PERSIAN word carries it —
+        # not when Persian merely follows an English clause that ended in a
+        # comma. End of line still counts («چطوری?» is the classic case) but
+        # only on a Persian line, or every English sentence that happens to
+        # close on a quoted Persian word gets flagged.
+        fa_line = _is_fa_dominant(line)
+        for m in re.finditer(r'[,;?]', line):
+            left, right = _neighbours(line, m.start())
+            if _is_fa_word(left) and (_is_fa_word(right) or (right == '' and fa_line)):
+                record('latin-punct', i, line, 'Latin ,;? in Persian context → ، ؛ ؟')
+                break
         for a in ARABIC_MAP:
             if a in line:
                 record('arabic-char', i, line, f'{a} → {ARABIC_MAP[a]}')
@@ -232,8 +346,13 @@ def check_remaining(text):
             record('zwnj-tar', i, line, 'comparative تر/ترین: use ZWNJ (بزرگ‌تر)')
         if re.search(r'"[^"\n]*' + FA_LETTER, line):
             record('quotes', i, line, 'straight quotes around Persian → «گیومه»')
-        # ASCII digits touching Persian words (not urls/emails/versions/code)
-        for tok in line.split():
+        # ASCII digits touching Persian words (not urls/emails/versions/code).
+        # Markdown heading and list numbering is document structure, not prose:
+        # «## 1. عنوان» is numbered by the renderer, and Persian digits there
+        # break ordered-list parsing.
+        digit_line = re.sub(r'^\s{0,3}#{1,6}\s+\d+[.)]\s+', '', line)
+        digit_line = re.sub(r'^\s*\d+[.)]\s+', '', digit_line)
+        for tok in digit_line.split():
             if (re.search(r'[0-9]', tok) and re.search(FA_LETTER, line)
                     and not _skip_token(tok)):
                 record('latin-digits', i, line, f'{tok}: Persian digits in Persian prose (or --digits)')
@@ -315,11 +434,13 @@ def main():
         text = unicodedata.normalize('NFC', text)
 
         if args.fix:
+            original = text
             text = fix_safe(text)
             if args.aggressive:
                 text = fix_aggressive(text)
             if args.digits:
                 text = fix_digits(text)
+            text = _preserve_ignored(original, text)
             if path == '-':
                 sys.stdout.write(text)
             else:
@@ -329,9 +450,13 @@ def main():
             label = 'remaining (need manual/contextual fixes)'
         else:
             check_remaining(text)
-            # also surface what --fix WOULD change
-            fixed = fix_safe(text)
-            if fixed != text:
+            # Also surface what --fix WOULD change — but blank out suppressed
+            # lines first, or a deliberate error example keeps advertising a
+            # fix that must never be applied to it.
+            ignored = _lint_ignored_lines(text)
+            preview = '\n'.join('' if i in ignored else line
+                                for i, line in enumerate(text.split('\n'), 1))
+            if fix_safe(preview) != preview:
                 record('fixable', 0, '(multiple)', 'safe auto-fixes available: rerun with --fix')
             label = 'issues'
 

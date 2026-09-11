@@ -92,6 +92,23 @@ After editing SKILL.md or references, regenerate the single-file edition:
 
 ## Version history
 
+- **1.3.7** — the linter stopped crying wolf. Unicode codepoint notation
+  (`U+06CC`) was reported as Latin digits and rewritten by `convert_digits`
+  into `U+۰۶CC`, which damaged the typography documents this toolkit exists
+  for. Persian rules are now scoped to Persian prose: an em dash or Latin
+  comma is flagged only between two Persian words, so bilingual glosses and
+  English sentences quoting a Persian term are left correct instead of being
+  reworded. Deliberate error examples can be marked with
+  `<!-- fa-lint-ignore-next-line -->` or a `…-start`/`…-end` block, and `--fix`
+  restores them instead of quietly repairing them. Also fixed: `--fix` glued
+  punctuation onto Markdown list markers (`- !` → `-!`), and the dictionary is
+  now located by search rather than one hardcoded path, so the scripts work
+  from any call site while the repository keeps a single copy. Across the
+  bundled docs, reported issues fell from 246 to 73 with no rule weakened;
+  `references/orthography.md` now passes clean. The codepoint bug was found and
+  fixed by [@bbmo9892-cpu](https://github.com/bbmo9892-cpu) in
+  [#2](https://github.com/ali2000hos/persian-writing/pull/2). New
+  `CONTRIBUTING.md` documents the design contract.
 - **1.3.6** — `--edit` no longer damages structured files. Code fences, inline
   code and table rows are now lifted out before the typographic pass and
   restored unchanged, and leading indentation is preserved. Previously the

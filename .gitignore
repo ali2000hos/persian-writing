@@ -4,3 +4,11 @@
 __pycache__/
 persian-writing-workspace/
 feedback.json
+
+# local environments and build output
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+test.txt

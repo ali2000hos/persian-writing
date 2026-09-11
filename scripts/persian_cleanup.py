@@ -80,7 +80,7 @@ from typing import Callable, Iterable, List, Optional, Sequence, Union
 # Constants
 # ---------------------------------------------------------------------------
 
-__version__ = "1.3.6"  # keep in sync with SKILL.md and .claude-plugin/plugin.json
+__version__ = "1.3.7"  # keep in sync with SKILL.md and .claude-plugin/plugin.json
 
 # Zero-Width Non-Joiner (نیم‌فاصله) — the heart of Persian typography
 ZWNJ = "\u200c"
@@ -287,22 +287,57 @@ _COMMON_MISSPELLINGS = {
 # Bundle dictionary loading (optional, for dictionary-aware collapse + spellcheck)
 # ---------------------------------------------------------------------------
 
-_BUNDLED_DICT_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-    "assets",
-    "persian_words.txt",
-)
+DICT_FILENAME = "persian_words.txt"
+DICT_ENV_VAR = "PERSIAN_WORDS"
+
+
+def dictionary_candidates() -> List[str]:
+    """Places the word list may live, in priority order.
+
+    The dictionary is ~7 MB, so the repository keeps exactly ONE copy, in
+    `assets/`. Robustness therefore has to come from looking in several places
+    rather than from shipping several copies — the trap a second copy sets is
+    that the two drift apart and nobody can tell which one is authoritative.
+    """
+    here = os.path.dirname(os.path.abspath(__file__))
+    roots = [
+        os.environ.get(DICT_ENV_VAR),                      # explicit override
+        os.path.join(os.path.dirname(here), "assets"),     # repo layout
+        os.path.join(here, "assets"),                      # script beside assets
+        os.path.join(os.getcwd(), "assets"),               # run from repo root
+        os.path.expanduser("~/.claude/skills/persian-writing/assets"),
+    ]
+    out = []
+    for root in roots:
+        if not root:
+            continue
+        path = root if root.endswith(".txt") else os.path.join(root, DICT_FILENAME)
+        if path not in out:
+            out.append(path)
+    return out
+
+
+def resolve_dictionary_path() -> Optional[str]:
+    """First candidate that exists, or None."""
+    for path in dictionary_candidates():
+        if os.path.isfile(path):
+            return path
+    return None
+
+
+# Back-compatible name; None when the word list is not installed.
+_BUNDLED_DICT_PATH = resolve_dictionary_path()
 
 
 def load_dictionary(path: Optional[str] = None) -> set:
     """Load a Persian word list (one word per line).
 
-    If `path` is None, loads the bundled mini-dictionary. Returns an empty
+    If `path` is None, searches `dictionary_candidates()`. Returns an empty
     set if no file is found — callers should treat this as "no dictionary".
     """
     if path is None:
-        path = _BUNDLED_DICT_PATH
-    if not os.path.isfile(path):
+        path = resolve_dictionary_path()
+    if not path or not os.path.isfile(path):
         return set()
     words = set()
     rank = {}
@@ -327,8 +362,29 @@ _DICT_RANK: dict = {}
 # Each function: (str) -> str  (one job, composable)
 # ---------------------------------------------------------------------------
 
+# Unicode codepoint notation is metalanguage about characters, not a number in
+# the text. «U+06CC» converted to «U+۰۶CC» no longer names anything, and the
+# damage lands hardest on documents that discuss Persian typography — exactly
+# the documents this toolkit is written for.
+_CODEPOINT_RE = re.compile(r"U\+[0-9A-Fa-f]{4,6}(?:\.\.)?")
+
+
+def _translate_outside_codepoints(text: str, mapping: dict) -> str:
+    """Apply a character map to everything except U+XXXX notation."""
+    parts = []
+    last = 0
+    for m in _CODEPOINT_RE.finditer(text):
+        parts.append(text[last:m.start()].translate(mapping))
+        parts.append(m.group(0))
+        last = m.end()
+    parts.append(text[last:].translate(mapping))
+    return "".join(parts)
+
+
 def convert_digits(text: str, to: str = "fa") -> str:
     """Convert digits between Persian, Arabic, and English.
+
+    Unicode codepoint notation such as ``U+06CC`` is preserved exactly.
 
     `to="fa"` → Persian (default)
     `to="en"` → English
@@ -337,15 +393,14 @@ def convert_digits(text: str, to: str = "fa") -> str:
     if not isinstance(text, str):
         raise TypeError("text must be str")
     if to == "fa":
-        return text.translate(_EN_TO_FA).translate(_AR_TO_FA)
+        return _translate_outside_codepoints(text, {**_EN_TO_FA, **_AR_TO_FA})
     if to == "en":
-        return text.translate(_FA_TO_EN).translate(
-            {ord(a): e for a, e in zip(AR_DIGITS, EN_DIGITS)}
-        )
+        en_map = {**_FA_TO_EN, **{ord(a): e for a, e in zip(AR_DIGITS, EN_DIGITS)}}
+        return _translate_outside_codepoints(text, en_map)
     if to == "ar":
-        en_to_ar = {ord(e): a for e, a in zip(EN_DIGITS, AR_DIGITS)}
-        fa_to_ar = {ord(f): a for f, a in zip(FA_DIGITS, AR_DIGITS)}
-        return text.translate(en_to_ar).translate(fa_to_ar)
+        ar_map = {**{ord(e): a for e, a in zip(EN_DIGITS, AR_DIGITS)},
+                  **{ord(f): a for f, a in zip(FA_DIGITS, AR_DIGITS)}}
+        return _translate_outside_codepoints(text, ar_map)
     raise ValueError(f"to must be 'fa', 'en', or 'ar', got {to!r}")
 
 

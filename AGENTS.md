@@ -63,3 +63,21 @@ verification. Bundled Vazirmatn and Lalezar fonts (SIL OFL).
   placeholder colors only.
 - Run `python3 scripts/fa_lint.py --check` on any Persian example text you
   add to the docs — the skill must pass its own linter.
+- When documentation intentionally shows an invalid Persian form, mark it with
+  `<!-- fa-lint-ignore-next-line -->`, or wrap a whole table of wrong/right
+  examples in `<!-- fa-lint-ignore-start -->` … `<!-- fa-lint-ignore-end -->`.
+  `--fix` restores suppressed lines, so error examples survive a fix pass.
+- The linter must not report Unicode codepoint notation (`U+06CC`, `U+200C`,
+  `U+066A`) as Latin digits, and `convert_digits` must not rewrite it. The
+  notation can appear glued to Markdown punctuation or inside a table cell, so
+  detection has to work mid-token.
+- Persian rules apply to Persian prose. The docs are bilingual: em dashes and
+  Latin commas are flagged only between two Persian words, so English sentences
+  that quote a Persian term stay correct English. If a rule fires on correct
+  English, scope the rule — do not rewrite the English.
+- One dictionary. `assets/persian_words.txt` is the only copy; scripts locate
+  it through `persian_cleanup.resolve_dictionary_path()`, which also honours
+  the `PERSIAN_WORDS` environment variable. Never add a second copy to make an
+  import path work.
+- Standard library only, and no packaging layer (`pyproject.toml`, `src/`).
+  See CONTRIBUTING.md for why.

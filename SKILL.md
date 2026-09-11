@@ -14,7 +14,7 @@ description: >
   like فارسی, Farsi, Persian, Iran, RTL, راست‌چین, نیم‌فاصله, ویرایش, مقاله,
   پایان‌نامه, سئو, کپشن, Vazirmatn — even if the user never mentions this skill.
 metadata:
-  version: 1.3.6
+  version: 1.3.7
 license: MIT (bundled fonts under SIL OFL)
 compatibility: >
   Any agent that reads Markdown skills (Claude, Claude Code, Cursor, Codex,

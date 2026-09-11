@@ -649,6 +649,21 @@ typed-in-a-hurry one. Readers may not name the rule, but they feel it. All of
 this is enforceable: the persian_cleanup script (full package; chat-only AIs apply the equivalent rules manually) --edit` fixes the mechanical
 layer automatically; the fa_lint script (full package; chat-only AIs apply the equivalent rules manually) --check` reports what needs judgment.
 
+When *you* write documentation that must show a wrong form on purpose — as the
+tables below do — suppress the linter on it rather than softening the example:
+
+```markdown
+<!-- fa-lint-ignore-next-line -->
+یک خط با خطای عمدی
+
+<!-- fa-lint-ignore-start -->
+چند خط، مثلاً یک جدول کامل «غلط ← درست»
+<!-- fa-lint-ignore-end -->
+```
+
+`--fix` puts suppressed lines back after the fix pass, so a deliberate error
+survives. Codepoint notation such as `U+06CC` is never rewritten.
+
 ## 1. ZWNJ — نیم‌فاصله (U+200C)
 
 The zero-width non-joiner separates morphemes *without* a visual gap while
@@ -657,6 +672,8 @@ most common Persian typing error, and AI-generated Persian gets it wrong both
 ways. In source: `‌`, HTML `&zwnj;`, or the literal character `‌`.
 
 Required ZWNJ positions:
+
+<!-- fa-lint-ignore-start -->
 
 | Pattern | Wrong | Right |
 |---|---|---|
@@ -668,6 +685,9 @@ Required ZWNJ positions:
 | Compound words | وب سایت، صفحه بندی، نرم افزار | وب‌سایت، صفحه‌بندی، نرم‌افزار |
 | ای after ه | حرفه ای، هفته ای | حرفه‌ای، هفته‌ای |
 
+<!-- fa-lint-ignore-end -->
+
+<!-- fa-lint-ignore-next-line -->
 *میشود (fully attached) is acceptable only in colloquial register (میشه);
 in formal text always می‌شود.
 
@@ -679,12 +699,16 @@ Lexicalized exceptions stay solid: همکار، بهتر، کمتر، بیشتر
 Keyboard/copy-paste contamination. These pairs look similar but are different
 codepoints, break search, and render dotted/undotted wrongly:
 
+<!-- fa-lint-ignore-start -->
+
 | Use (Persian) | Never (Arabic) |
 |---|---|
 | ی U+06CC | ي U+064A |
 | ک U+06A9 | ك U+0643 |
 | ۀ/هٔ (or ه‌ی) | ة U+0629 |
 | ۴۵۶ U+06F4.. | ٤٥٦ U+0664.. |
+
+<!-- fa-lint-ignore-end -->
 
 ه with hamza: خانهٔ من or خانه‌ی من — both accepted; be consistent per document.
 
@@ -695,12 +719,15 @@ codepoints, break search, and render dotted/undotted wrongly:
 - Latin digits stay Latin inside: URLs, emails, phone numbers meant for
   international dialing (+98...), code, version strings (WordPress 6.5),
   file names.
+<!-- fa-lint-ignore-next-line -->
 - Never Arabic-Indic variants (٤ ٥ ٦).
 - Percent: «۲۰٪» (U+066A) or «۲۰ درصد». In RTL both orders render fine if the
   digits are Persian; with Latin digits «20%» the run flips LTR.
 - Thousands separator: ٬ (U+066C) or، comma-free spacing — one style per doc.
 
 ## 4. Punctuation
+
+<!-- fa-lint-ignore-start -->
 
 | Persian | Replaces | Note |
 |---|---|---|
@@ -710,8 +737,11 @@ codepoints, break search, and render dotted/undotted wrongly:
 | «...» | "..." | quotes (گیومه) |
 | … | ... | ellipsis, or سه‌نقطه |
 
+<!-- fa-lint-ignore-end -->
+
 Rules:
 - No space *before* punctuation, one space *after*: «درست، مثل این.»
+<!-- fa-lint-ignore-next-line -->
 - ! stays ! — but one, never !!!
 - Em/en dashes: not used in Persian prose. Use «،» «؛» ( ) or restructure.
 - Latin fragments inside Persian (brand names, code) keep Latin punctuation
@@ -740,6 +770,8 @@ Iranians screenshot هکسره mistakes off billboards and brand accounts for sp
 If the sentence still makes sense, the correct spelling is «ـه». If it turns to
 nonsense, you need a kasre (and usually write nothing at all).
 
+<!-- fa-lint-ignore-start -->
+
 - «این کتابه» ← «این کتاب است» ✓ → «ـه» correct
 - «کتابه من» ← «کتاب است من» ✗ → ezafe needed: **کتابِ من** (or plain «کتاب من»)
 
@@ -753,6 +785,8 @@ nonsense, you need a kasre (and usually write nothing at all).
 | سایته شرکت بالا نمیاد | سایتِ شرکت بالا نمیاد | ezafe |
 | هوا خیلی خوبِ | هوا خیلی خوبه | predicate «است» — the reverse error |
 | ماشینه من خرابه | ماشینِ من خرابه | ezafe first, «است» second ✓ |
+
+<!-- fa-lint-ignore-end -->
 
 **Careful — these are NOT errors.** Many nouns simply end in ه, and they take a
 normal ezafe like any other word: خانه، نامه، برنامه، پروژه، مقاله، هفته، تجربه،
@@ -781,6 +815,8 @@ Formal prose: one-word numbers under eleven often spelled out (سه پیشنها
 
 ## 8. Common corrections table
 
+<!-- fa-lint-ignore-start -->
+
 | Wrong | Right | Why |
 |---|---|---|
 | میخواهم | می‌خواهم | ZWNJ after می |
@@ -793,6 +829,8 @@ Formal prose: one-word numbers under eleven often spelled out (سه پیشنها
 | "نقل قول" | «نقل قول» | گیومه |
 | 20 درصد | ۲۰ درصد | Persian digits |
 | سال 2026 | سال ۲۰۲۶ | Persian digits |
+
+<!-- fa-lint-ignore-end -->
 
 
 
