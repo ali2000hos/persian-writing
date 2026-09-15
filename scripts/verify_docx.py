@@ -214,8 +214,12 @@ def check(path, expect_fonts):
     if n_par and n_bidi < n_par * 0.5:
         warnings.append(f'only {n_bidi} of ~{n_par} paragraphs carry <w:bidi> — '
                         f'unflagged paragraphs inherit section direction')
+    styles = items.get('word/styles.xml', b'').decode('utf-8', 'ignore')
     if n_rtl == 0:
-        errors.append('no <w:rtl/> runs — Persian text will not shape as complex script')
+        if '<w:rtl' in styles or '<w:bidi' in styles:
+            notes.append('runs inherit <w:rtl/> from styles.xml')
+        else:
+            errors.append('no <w:rtl/> runs in document.xml or styles.xml — Persian text will not shape as complex script')
 
     # 3. RIGHT alignment on bidi paragraphs (the classic trap)
     n_right = len(re.findall(r'<w:jc w:val="(?:right|end)"', doc))
@@ -223,17 +227,22 @@ def check(path, expect_fonts):
         warnings.append(f'{n_right} paragraph(s) use jc=right/end — in RTL this means the '
                         f'VISUAL LEFT. Use w:val="start"')
 
-    # 4. complex-script font on runs
+    # 4. complex-script font on runs or styles
     cs = re.findall(r'w:cs="([^"]+)"', doc)
-    if not cs:
-        errors.append('no w:cs (complex-script) font set — Word/LibreOffice will pick '
+    styles_cs = re.findall(r'w:cs="([^"]+)"', styles)
+    all_cs = cs or styles_cs
+    if not all_cs:
+        errors.append('no w:cs (complex-script) font set in runs or styles.xml — Word/LibreOffice will pick '
                       'its own font for Persian')
-    elif expect_fonts:
-        wrong = {f for f in cs if not any(e.lower() in f.lower() for e in expect_fonts)}
-        if wrong:
-            warnings.append(f'unexpected complex-script font(s): {", ".join(sorted(wrong))}')
-    if '<w:szCs' not in doc:
-        warnings.append('no <w:szCs> — complex-script text may ignore your font sizes')
+    else:
+        if not cs and styles_cs:
+            notes.append(f'w:cs font inherited from styles.xml ({", ".join(sorted(set(styles_cs)))})')
+        if expect_fonts:
+            wrong = {f for f in all_cs if not any(e.lower() in f.lower() for e in expect_fonts)}
+            if wrong:
+                warnings.append(f'unexpected complex-script font(s): {", ".join(sorted(wrong))}')
+    if '<w:szCs' not in doc and '<w:szCs' not in styles:
+        warnings.append('no <w:szCs> in document.xml or styles.xml — complex-script text may ignore your font sizes')
 
     # 5. built-in list numbering (renders Latin digits, wrong side, OpenSymbol bullets)
     if '<w:numPr>' in doc:
