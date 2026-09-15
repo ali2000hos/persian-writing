@@ -134,8 +134,10 @@ _PUNCT_TO_FA = {
 # Common Persian verb prefixes that take ZWNJ
 _VERB_PREFIXES = ("می", "نمی", "بر", "باز", "بی", "می\u200c")  # last one is already-correct
 
-# Preverb particles that join the verb stem with ZWNJ removal (compound verbs)
-_COMPOUND_PREFIXES = ("فرا", "باز", "در", "فرورد", "بر", "بی", "وا")
+# Preverb particles that join the verb stem with ZWNJ removal (compound verbs).
+# 'در', 'بر', 'بی' are excluded because they are common prepositions/adjectives
+# (e.g. 'بی داشتن', 'در گفتن', 'بر داشتن') whose automatic joining corrupts prose.
+_COMPOUND_PREFIXES = ("فرا", "باز", "فرورد", "وا")
 
 # Suffixes that attach with ZWNJ
 _SUFFIXES = ("تر", "ترین", "ها", "های", "هایی", "هایی که", "ام", "ات", "اش")
