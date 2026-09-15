@@ -507,7 +507,10 @@ def fix_arabic_chars(text: str) -> str:
 def fix_persian_punctuation(text: str) -> str:
     """Convert English punctuation to Persian equivalents:
     ? → ؟, ; → ؛, , → ،, and "..." → «...» (paired guillemets).
+    English comma between digits is converted to Persian thousands separator (٬ U+066C).
     """
+    # Convert comma between digits to Persian thousands separator (٬ U+066C)
+    text = re.sub(r"(?<=[0-9۰-۹]),(?=[0-9۰-۹])", "\u066c", text)
     text = text.replace("?", "؟").replace(";", "؛").replace(",", "،")
     # Paired double quotes → guillemets
     # Find pairs of " and replace them with « »
