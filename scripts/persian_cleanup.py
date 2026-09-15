@@ -182,10 +182,11 @@ _REPEATED_PUNCT = re.compile(r"([!?؟])\1+")
 # merging paragraphs and destroying Markdown structure (lists, headings, code
 # fences). That silent damage is worse than the spacing it fixes.
 _PUNCT_SPACE_BEFORE = re.compile(r"[ \t]+([!?؟:;,؛،.])")
-_PUNCT_SPACE_AFTER_DOT = re.compile(r"([،؛:!؟.])[ \t]{2,}")
+_PUNCT_SPACE_AFTER_DOT = re.compile(r"([،؛:!?.])[ \t]{2,4}(?![ \t])")
 
-# Multiple consecutive spaces (preserve newlines)
+# Accidental consecutive spaces (2-4 spaces to collapse, while preserving 5+ for column alignment)
 _MULTI_SPACE = re.compile(r"[ \t]{2,}")
+_ACCIDENTAL_SPACE = re.compile(r"(?<![ \t])[ \t]{2,4}(?![ \t])")
 
 # ---------------------------------------------------------------------------
 # Protected regions
@@ -475,14 +476,16 @@ def strip_characters(text: str, keep: Union[str, Sequence[str]] = "fa") -> str:
 
 
 def remove_extra_spaces(text: str) -> str:
-    """Collapse multiple spaces/tabs into one. Preserve newlines."""
-    # Collapse runs of spaces INSIDE each line, but never the leading indent:
-    # indentation carries meaning (nested lists, indented code, YAML), and
-    # flattening it silently reshapes the document.
+    """Collapse accidental multiple spaces/tabs (2-4 spaces) into one.
+    Preserves newlines, markdown indentation, and wide spacing (5+ spaces)
+    used for multi-column / signature alignment.
+    """
+    # Collapse runs of 2-4 spaces INSIDE each line, but never the leading indent
+    # or wide spacing (5+ spaces) used for columnar/signature alignment.
     lines = []
     for line in text.split("\n"):
         indent = re.match(r"[ \t]*", line).group(0)
-        body = _MULTI_SPACE.sub(" ", line[len(indent):]).rstrip()
+        body = _ACCIDENTAL_SPACE.sub(" ", line[len(indent):]).rstrip()
         lines.append(indent + body if body else "")
     text = "\n".join(lines)
     # Trim surrounding blank space, but keep one trailing newline if the input
