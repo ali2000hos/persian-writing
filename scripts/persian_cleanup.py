@@ -536,17 +536,12 @@ def fix_punctuation_spacing(text: str) -> str:
 
 
 def fix_ezafe(text: str) -> str:
-    """Convert the ezafe marker 'ی' (when written as a separate ZWNJ-joined
-    character) to the proper 'ـِ' kasre or simply to 'ی' without ZWNJ.
-
-    Paknevis rule: خانه‌ی → خانهٔ (hamza above)
-    We use the Unicode 'ARABIC LETTER HEH WITH YEH ABOVE' (U+06C0) which is
-    the typographically correct Persian ezafe form.
+    """Convert the ezafe marker 'ی' after silent heh (خانه‌ی → خانهٔ).
+    Uses combining ARABIC HAMZA ABOVE (U+0654), which attaches to the final heh
+    without duplicating the letter.
     """
-    # خانه‌ی → خانهٔ  (U+06C0 = ARABIC LETTER HEH WITH YEH ABOVE)
-    text = re.sub(r"(\S)" + ZWNJ + r"ی\b", r"\1" + "\u06C0", text)
-    # Also handle خانه ی (with regular space) → خانهٔ only when the next
-    # word starts with a non-Persian-letter boundary.
+    # خانه‌ی → خانهٔ  (U+0654 = combining ARABIC HAMZA ABOVE on existing heh)
+    text = re.sub(r"([هة])" + ZWNJ + r"ی\b", lambda m: m.group(1) + "\u0654", text)
     return text
 
 
