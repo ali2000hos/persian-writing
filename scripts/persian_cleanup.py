@@ -592,14 +592,13 @@ def fix_zwnj_compound_verbs(text: str) -> str:
 def fix_zwnj_suffixes(text: str) -> str:
     """Insert ZWNJ before comparative/superlative/plural suffixes.
     'کثیف تر' → 'کثیف‌تر', 'کتاب ها' → 'کتاب‌ها', 'خوب ترین' → 'خوب‌ترین'.
+    Skips idioms like 'تر و تازه' and adjectives like 'تر و خشک'.
     """
-    # Match a Persian word followed by space + suffix at word boundary.
-    # Avoid inserting ZWNJ if it's already there.
-    suffix_alt = "تر|ترین|ها|های|هایی"
-    pattern = re.compile(
-        r"([ء-یء-۾][ء-یء-۾]*?)\s+(" + suffix_alt + r")\b"
-    )
-    return pattern.sub(r"\1" + ZWNJ + r"\2", text)
+    # 1. plural suffixes: ها, های, هایی
+    text = re.sub(r"([ء-یء-۾]+)\s+(ها(?:ی|یی)?)\b", r"\1" + ZWNJ + r"\2", text)
+    # 2. comparative/superlative: تر, ترین (skip 'تر و تازه', 'تر و خشک')
+    text = re.sub(r"([ء-یء-۾]{2,})\s+(تر|ترین)\b(?! و (?:تازه|خشک))", r"\1" + ZWNJ + r"\2", text)
+    return text
 
 
 def fix_zwnj_possessives(text: str) -> str:
