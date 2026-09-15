@@ -80,7 +80,7 @@ from typing import Callable, Iterable, List, Optional, Sequence, Union
 # Constants
 # ---------------------------------------------------------------------------
 
-__version__ = "1.3.6"  # keep in sync with SKILL.md and .claude-plugin/plugin.json
+__version__ = "1.3.7"  # keep in sync with SKILL.md and .claude-plugin/plugin.json
 
 # Zero-Width Non-Joiner (نیم‌فاصله) — the heart of Persian typography
 ZWNJ = "\u200c"
@@ -218,7 +218,7 @@ _PROTECTED_PATTERNS = (
     # English bibliography lines starting with [digit] followed by Latin author
     re.compile(r"^[ \t]*\[\d+\]\s+[A-Za-z].*$", re.MULTILINE),
     # Full URLs (http/https/www)
-    re.compile(r"https?://[^\s)\]}>\"\x27\u060c\u061b\u061f]+|www\.[^\s)\]}>\"\x27\u060c\u061b\u061f]+"),
+    re.compile(r"https?://[^\s)\]}>\"'\u060c\u061b\u061f]+|www\.[^\s)\]}>\"'\u060c\u061b\u061f]+"),
     # Email addresses
     re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"),
     # IBAN

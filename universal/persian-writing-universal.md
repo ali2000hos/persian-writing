@@ -2463,6 +2463,8 @@ def persianize_styles(doc, font='Vazirmatn', size=11):
         _set(OxmlElement('w:bidi'), h.element.get_or_add_pPr())
 ```
 
+`verify_docx.py` validates `w:rtl`, `w:cs`, and `w:szCs` at both run level and style level (`styles.xml`), so documents initialized with `persianize_styles()` pass cleanly without requiring redundant inline properties on every single run.
+
 **Numbered and bulleted lists: do NOT use the built-in list styles.**
 `doc.add_paragraph(style='List Number')` writes numbering into `numbering.xml`,
 which carries no bidi and renders Latin `1.` on the wrong side; the `List

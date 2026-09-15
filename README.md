@@ -92,6 +92,19 @@ After editing SKILL.md or references, regenerate the single-file edition:
 
 ## Version history
 
+- **1.3.7** — comprehensive fix for editorial pipeline corruption bugs:
+  - `persian_cleanup.py`: expanded protected regions to preserve URLs, email addresses,
+    IBANs, international phone numbers (+98...), software versions (e.g. Python 3.11),
+    DOIs, English citations, and hardware models. Fixed `fix_ezafe` creating double heh (`خانهۀ` → `خانهٔ`).
+    Fixed `_COMPOUND_PREFIXES` joining prepositions `بی/در/بر` with verbs. Fixed `fix_zwnj_suffixes`
+    corrupting `تر و تازه`. Converted commas in numbers to Persian thousands separator (٬ U+066C).
+    Preserved wide multi-column/signature spacing in `remove_extra_spaces` and `fix_punctuation_spacing`.
+    Preserved hamza on `أ` and `ؤ` in standard Persian words.
+  - `fa_lint.py`: shared protected regions with cleanup pipeline. Fixed false positive hekasre
+    on adverbs ending in `-انه` (e.g. `همکارانه`). Allowed en-dash in numerical/date ranges (`۱۲۰–۱۴۵`).
+    Suppressed `no-long-sentence` rhythm warning on technical/instructional text.
+  - `verify_docx.py`: added style-level inheritance detection for `w:rtl` and `w:cs` from `styles.xml`.
+  - `verify_pdf.py`: skipped range en-dashes between digits in dash warning.
 - **1.3.6** — `--edit` no longer damages structured files. Code fences, inline
   code and table rows are now lifted out before the typographic pass and
   restored unchanged, and leading indentation is preserved. Previously the
