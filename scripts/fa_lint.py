@@ -165,9 +165,9 @@ def fix_safe(text):
     return text
 
 def fix_aggressive(text):
-    # comparative/superlative: بزرگ تر → بزرگ‌تر (skip «تر و تازه»)
-    text = re.sub(r'(' + FA_LETTER + r'{2,}) (تر|ترین)\b(?! و تازه)',
-                  r'\1' + ZWNJ + r'\2', text)
+    # comparative/superlative: بزرگ تر → بزرگ‌تر (skip coordinated «تر و Y» compounds)
+    text = re.sub(r'(' + FA_LETTER + r'{2,}) ترین\b', r'\1' + ZWNJ + 'ترین', text)
+    text = re.sub(r'(' + FA_LETTER + r'{2,}) تر\b(?!\s+و\s+' + FA_LETTER + ')', r'\1' + ZWNJ + 'تر', text)
     # straight quotes wrapping Persian → گیومه
     text = re.sub(r'"([^"\n]*' + FA_LETTER + r'[^"\n]*)"', r'«\1»', text)
     return text
@@ -245,7 +245,7 @@ def check_remaining(text):
             record('zwnj-mi', i, line, 'می + space → می + ZWNJ (نیم‌فاصله)')
         if re.search(r'(' + FA_LETTER + r') ها\b', line):
             record('zwnj-ha', i, line, 'plural ها: use ZWNJ (کتاب‌ها) — ignore if emphasis particle')
-        if re.search(r'(' + FA_LETTER + r'{2,}) (تر|ترین)\b(?! و تازه)', line):
+        if re.search(r'(' + FA_LETTER + r'{2,}) ترین\b', line) or re.search(r'(' + FA_LETTER + r'{2,}) تر\b(?!\s+و\s+' + FA_LETTER + ')', line):
             record('zwnj-tar', i, line, 'comparative تر/ترین: use ZWNJ (بزرگ‌تر)')
         if re.search(r'"[^"\n]*' + FA_LETTER, line):
             record('quotes', i, line, 'straight quotes around Persian → «گیومه»')

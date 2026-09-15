@@ -632,12 +632,21 @@ def fix_zwnj_compound_verbs(text: str) -> str:
 def fix_zwnj_suffixes(text: str) -> str:
     """Insert ZWNJ before comparative/superlative/plural suffixes.
     'کثیف تر' → 'کثیف‌تر', 'کتاب ها' → 'کتاب‌ها', 'خوب ترین' → 'خوب‌ترین'.
-    Skips idioms like 'تر و تازه' and adjectives like 'تر و خشک'.
+
+    Rule-based 'تر': if 'تر' is immediately followed by ' و <word>'
+    (the coordinated 'تر و Y' compound: تر و تمیز، تر و تازه، تر و فرز، تر و خشک...),
+    it functions as the independent adjective 'تَر' rather than a comparative
+    suffix on the preceding word — so it stays detached. Also un-joins any
+    mistakenly attached 'X‌تر و Y' (e.g. 'سایت‌تر و تمیز' → 'سایت تر و تمیز').
     """
     # 1. plural suffixes: ها, های, هایی
     text = re.sub(r"([ء-یء-۾]+)\s+(ها(?:ی|یی)?)\b", r"\1" + ZWNJ + r"\2", text)
-    # 2. comparative/superlative: تر, ترین (skip 'تر و تازه', 'تر و خشک')
-    text = re.sub(r"([ء-یء-۾]{2,})\s+(تر|ترین)\b(?! و (?:تازه|خشک))", r"\1" + ZWNJ + r"\2", text)
+    # 2. superlative suffix 'ترین' (always a suffix, never independent)
+    text = re.sub(r"([ء-یء-۾]{2,})\s+(ترین)\b", r"\1" + ZWNJ + r"\2", text)
+    # 3. un-join mistakenly attached 'تر' in 'تر و Y' compounds (e.g. سایت‌تر و تمیز → سایت تر و تمیز)
+    text = re.sub(r"([ء-یء-۾]+)" + ZWNJ + r"تر\s+و\s+([ء-یء-۾]+)", r"\1 تر و \2", text)
+    # 4. comparative suffix 'تر': attach unless followed by ' و <word>' (coordinated 'تر و Y' compound)
+    text = re.sub(r"([ء-یء-۾]{2,})\s+تر\b(?!\s+و\s+[ء-یء-۾])", r"\1" + ZWNJ + "تر", text)
     return text
 
 
