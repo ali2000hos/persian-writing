@@ -46,6 +46,15 @@ PERSIAN = r'؀-ۿ‌'
 FA_LETTER = r'[ء-غف-ئپچژکگیة]'
 ZWNJ = '‌'
 
+_LEXICAL_COMPARATIVES = {"بهتر", "بیشتر", "کمتر", "پیشتر", "بدتر", "مهتر", "کهتر"}
+_COORD_COMP_AHEAD = re.compile(r"^\s+و\s+([ء-یء-۾]+)(?:\s+تر\b|\u200cتر\b)")
+
+def _is_coord_comparative(tail: str) -> bool:
+    if _COORD_COMP_AHEAD.match(tail):
+        return True
+    m_lex = re.match(r"^\s+و\s+([ء-یء-۾]+)\b", tail)
+    return bool(m_lex and m_lex.group(1) in _LEXICAL_COMPARATIVES)
+
 ISSUES = []
 CURRENT_TOKENS = []
 
@@ -165,9 +174,19 @@ def fix_safe(text):
     return text
 
 def fix_aggressive(text):
-    # comparative/superlative: بزرگ تر → بزرگ‌تر (skip coordinated «تر و Y» compounds)
+    # comparative/superlative: بزرگ تر → بزرگ‌تر
     text = re.sub(r'(' + FA_LETTER + r'{2,}) ترین\b', r'\1' + ZWNJ + 'ترین', text)
-    text = re.sub(r'(' + FA_LETTER + r'{2,}) تر\b(?!\s+و\s+' + FA_LETTER + ')', r'\1' + ZWNJ + 'تر', text)
+
+    def _join_tar(m):
+        w = m.group(1)
+        tail = text[m.end():m.end() + 40]
+        if tail.startswith(" و "):
+            if _is_coord_comparative(tail):
+                return w + ZWNJ + "تر"
+            return m.group(0)
+        return w + ZWNJ + "تر"
+
+    text = re.sub(r'(' + FA_LETTER + r'{2,})\s+تر\b', _join_tar, text)
     # straight quotes wrapping Persian → گیومه
     text = re.sub(r'"([^"\n]*' + FA_LETTER + r'[^"\n]*)"', r'«\1»', text)
     return text
@@ -245,8 +264,14 @@ def check_remaining(text):
             record('zwnj-mi', i, line, 'می + space → می + ZWNJ (نیم‌فاصله)')
         if re.search(r'(' + FA_LETTER + r') ها\b', line):
             record('zwnj-ha', i, line, 'plural ها: use ZWNJ (کتاب‌ها) — ignore if emphasis particle')
-        if re.search(r'(' + FA_LETTER + r'{2,}) ترین\b', line) or re.search(r'(' + FA_LETTER + r'{2,}) تر\b(?!\s+و\s+' + FA_LETTER + ')', line):
-            record('zwnj-tar', i, line, 'comparative تر/ترین: use ZWNJ (بزرگ‌تر)')
+        if re.search(r'(' + FA_LETTER + r'{2,}) ترین\b', line):
+            record('zwnj-tar', i, line, 'comparative ترین: use ZWNJ (بزرگ‌ترین)')
+        for m in re.finditer(r'(' + FA_LETTER + r'{2,})\s+تر\b', line):
+            tail = line[m.end():m.end() + 40]
+            if tail.startswith(" و ") and not _is_coord_comparative(tail):
+                continue
+            record('zwnj-tar', i, line, 'comparative تر: use ZWNJ (بزرگ‌تر)')
+            break
         if re.search(r'"[^"\n]*' + FA_LETTER, line):
             record('quotes', i, line, 'straight quotes around Persian → «گیومه»')
         # ASCII digits touching Persian words (not urls/emails/versions/code)

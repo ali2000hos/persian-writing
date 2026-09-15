@@ -629,24 +629,54 @@ def fix_zwnj_compound_verbs(text: str) -> str:
     return pattern.sub(r"\1\2", text)
 
 
+_LEXICAL_COMPARATIVES = {"بهتر", "بیشتر", "کمتر", "پیشتر", "بدتر", "مهتر", "کهتر"}
+_COORD_COMP_AHEAD = re.compile(r"^\s+و\s+([ء-یء-۾]+)(?:\s+تر\b|\u200cتر\b)")
+
+
+def _is_coord_comparative(tail: str) -> bool:
+    """Check if ' و Y' represents a coordinated comparative (e.g. ' و پیچیده‌تر', ' و بهتر')."""
+    if _COORD_COMP_AHEAD.match(tail):
+        return True
+    m_lex = re.match(r"^\s+و\s+([ء-یء-۾]+)\b", tail)
+    return bool(m_lex and m_lex.group(1) in _LEXICAL_COMPARATIVES)
+
+
 def fix_zwnj_suffixes(text: str) -> str:
     """Insert ZWNJ before comparative/superlative/plural suffixes.
     'کثیف تر' → 'کثیف‌تر', 'کتاب ها' → 'کتاب‌ها', 'خوب ترین' → 'خوب‌ترین'.
 
-    Rule-based 'تر': if 'تر' is immediately followed by ' و <word>'
-    (the coordinated 'تر و Y' compound: تر و تمیز، تر و تازه، تر و فرز، تر و خشک...),
-    it functions as the independent adjective 'تَر' rather than a comparative
-    suffix on the preceding word — so it stays detached. Also un-joins any
-    mistakenly attached 'X‌تر و Y' (e.g. 'سایت‌تر و تمیز' → 'سایت تر و تمیز').
+    Rule-based 'تر':
+    - Coordinated comparatives ('سخت تر و پیچیده تر', 'قوی تر و شجاع تر', 'بزرگ تر و بهتر'):
+      both 'تر' elements are comparative suffixes and receive ZWNJ.
+    - Coordinated non-comparative compounds ('تر و تمیز', 'تر و تازه', 'تر و فرز', 'تر و خشک'):
+      'تَر' is an independent adjective in a hendiadys compound; it stays detached.
+      Also un-joins any mistakenly attached 'X‌تر و Y' (e.g. 'سایت‌تر و تمیز' → 'سایت تر و تمیز').
     """
     # 1. plural suffixes: ها, های, هایی
     text = re.sub(r"([ء-یء-۾]+)\s+(ها(?:ی|یی)?)\b", r"\1" + ZWNJ + r"\2", text)
     # 2. superlative suffix 'ترین' (always a suffix, never independent)
     text = re.sub(r"([ء-یء-۾]{2,})\s+(ترین)\b", r"\1" + ZWNJ + r"\2", text)
-    # 3. un-join mistakenly attached 'تر' in 'تر و Y' compounds (e.g. سایت‌تر و تمیز → سایت تر و تمیز)
-    text = re.sub(r"([ء-یء-۾]+)" + ZWNJ + r"تر\s+و\s+([ء-یء-۾]+)", r"\1 تر و \2", text)
-    # 4. comparative suffix 'تر': attach unless followed by ' و <word>' (coordinated 'تر و Y' compound)
-    text = re.sub(r"([ء-یء-۾]{2,})\s+تر\b(?!\s+و\s+[ء-یء-۾])", r"\1" + ZWNJ + "تر", text)
+
+    # 3. un-join mistakenly attached 'تر' ONLY in non-comparative idioms (e.g. 'سایت‌تر و تمیز' → 'سایت تر و تمیز')
+    def _unjoin_if_idiom(m):
+        w, tail = m.group(1), m.group(2)
+        if _is_coord_comparative(" و " + tail):
+            return m.group(0)  # Keep joined: سخت‌تر و پیچیده‌تر
+        return f"{w} تر و {tail}"
+
+    text = re.sub(r"([ء-یء-۾]+)" + ZWNJ + r"تر\s+و\s+([ء-یء-۾]+)", _unjoin_if_idiom, text)
+
+    # 4. comparative suffix 'تر':
+    def _join_tar(m):
+        w = m.group(1)
+        tail = text[m.end():m.end() + 40]
+        if tail.startswith(" و "):
+            if _is_coord_comparative(tail):
+                return w + ZWNJ + "تر"
+            return m.group(0)  # Keep detached: تر و تمیز
+        return w + ZWNJ + "تر"
+
+    text = re.sub(r"([ء-یء-۾]{2,})\s+تر\b", _join_tar, text)
     return text
 
 
