@@ -107,7 +107,9 @@ def main():
         errors.append('Arabic characters in text: ' +
                       ', '.join(f'{c}×{n}' for c, n in Counter(arabic).most_common()))
 
-    n_dash = full.count('—') + full.count('–')
+    # Count em-dashes and non-range en-dashes (skipping en-dashes between digits like ۱۲۰–۱۴۵)
+    full_no_ranges = re.sub(r'[۰-۹0-9]\s*–\s*[۰-۹0-9]', '', full)
+    n_dash = full_no_ranges.count('—') + full_no_ranges.count('–')
     if n_dash:
         warnings.append(f'{n_dash} em/en dash(es) in text — not Persian punctuation')
 
