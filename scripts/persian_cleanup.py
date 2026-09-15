@@ -95,12 +95,12 @@ _AR_TO_FA = {ord(a): f for a, f in zip(AR_DIGITS, FA_DIGITS)}
 _FA_TO_EN = {ord(f): e for f, e in zip(FA_DIGITS, EN_DIGITS)}
 
 # Arabic characters that have canonical Persian equivalents
+# Note: أ and ؤ are standard in Persian orthography (مؤلف، تأکید، سؤال)
+# and must NOT be stripped of hamza.
 _ARABIC_TO_PERSIAN = {
     ord("ي"): "ی",  # Arabic yeh → Persian yeh
     ord("ك"): "ک",  # Arabic kaf → Persian kaf
-    ord("ؤ"): "و",
-    ord("إ"): "ا",
-    ord("أ"): "ا",
+    ord("إ"): "ا",  # Arabic alef with hamza below → alef
     ord("آ"): "آ",
     ord("ة"): "ه",  # ta marbuta → heh
     ord("ٰ"): "",    # superscript alef
