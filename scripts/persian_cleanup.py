@@ -209,6 +209,39 @@ _FENCED_CODE = re.compile(r"^[ \t]*(`{3,}|~{3,})[^\n]*\n(?:.*?\n)??[ \t]*\1[^\n]
 _TABLE_ROW = re.compile(r"^[ \t]*\|.*$", re.MULTILINE)
 _INLINE_CODE = re.compile(r"`[^`\n]+`")
 
+# Additional regions that must stay Latin/exact: URLs, emails, phone numbers,
+# IBANs, DOIs, English citations, software versions, and technical identifiers.
+_PROTECTED_PATTERNS = (
+    _FENCED_CODE,
+    _TABLE_ROW,
+    _INLINE_CODE,
+    # English bibliography lines starting with [digit] followed by Latin author
+    re.compile(r"^[ \t]*\[\d+\]\s+[A-Za-z].*$", re.MULTILINE),
+    # Full URLs (http/https/www)
+    re.compile(r"https?://[^\s)\]}>\"\x27\u060c\u061b\u061f]+|www\.[^\s)\]}>\"\x27\u060c\u061b\u061f]+"),
+    # Email addresses
+    re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"),
+    # IBAN
+    re.compile(r"\b[A-Z]{2}\d{2}[A-Za-z0-9]{12,30}\b"),
+    # International phone numbers with + or 00
+    re.compile(r"(?<!\w)(?:\+\d{1,4}[-.\s]?(?:\(?\d{1,4}\)?[-.\s]?)?\d{3,4}[-.\s]?\d{3,4}|00\d{2,4}[-.\s]?\d{3,4}[-.\s]?\d{3,4})\b"),
+    # DOIs
+    re.compile(r"\b(?:doi:\s*)?10\.\d{4,9}/[-._;()/:A-Za-z0-9]+"),
+    # English parenthetical citations (e.g. (Habermas, 1984: 86))
+    re.compile(r"\([A-Za-z][^)\n]*\d{4}[^)\n]*\)"),
+    # Software versions: standalone starting with v/V (v1.28.2), or following a Latin name (Python 3.11, Ubuntu 22.04)
+    # Standalone decimals in Persian prose (e.g. 2.5 میلیون تومان) are intentionally NOT protected.
+    re.compile(r"\b[vV]\d+(?:\.\d+)+(?:[a-zA-Z0-9_.-]*)\b"),
+    re.compile(r"\b[A-Za-z][A-Za-z0-9_.-]*[ \t:=]+\d+(?:\.\d+)+(?:[a-zA-Z0-9_.-]*)\b"),
+    # Alphanumeric hardware/model tokens: H100, B200, WH-1000XM5, MP3, QN1, V1, X1, β1, etc.
+    re.compile(r"\b[A-Za-z0-9]+-[A-Za-z0-9-]*\d+[A-Za-z0-9-]*\b"),
+    re.compile(r"\b[A-Za-z\u0370-\u03ff\u1f00-\u1fff]+[0-9]+[A-Za-z0-9]*\b"),
+    # HTTP status codes
+    re.compile(r"\bHTTP\s+\d{3}\b"),
+    # Technical units
+    re.compile(r"\b\d+(?:\.\d+)?\s*(?:mm|cm|m|km|kbps|Mbps|Gbps|kHz|MHz|GHz|ms|s|Mi|Gi|MB|GB)\b"),
+)
+
 
 def _encode_index(i: int) -> str:
     """Index → letters only (no digits, which convert_digits would rewrite)."""
@@ -221,7 +254,8 @@ def _encode_index(i: int) -> str:
 
 
 def protect_regions(text: str):
-    """Replace code fences, table rows and inline code with placeholders.
+    """Replace code fences, table rows, inline code, URLs, emails, versions,
+    and other technical tokens with placeholders.
 
     Returns (masked_text, tokens). Restore with restore_regions().
     """
@@ -231,7 +265,7 @@ def protect_regions(text: str):
         tokens.append(m.group(0))
         return f"{_PROTECT_OPEN}{_encode_index(len(tokens) - 1)}{_PROTECT_CLOSE}"
 
-    for pattern in (_FENCED_CODE, _TABLE_ROW, _INLINE_CODE):
+    for pattern in _PROTECTED_PATTERNS:
         text = pattern.sub(_stash, text)
     return text, tokens
 
