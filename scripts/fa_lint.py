@@ -31,15 +31,27 @@ Report-only (never auto-fixed — need human/context judgment):
 
 Exit code: 0 = clean, 1 = issues found (check) / unfixable issues remain (fix).
 """
-import argparse, re, sys, unicodedata
+import argparse, os, re, sys, unicodedata
+
+try:
+    from scripts.persian_cleanup import protect_regions, restore_regions
+except ImportError:
+    try:
+        from persian_cleanup import protect_regions, restore_regions
+    except ImportError:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from persian_cleanup import protect_regions, restore_regions
 
 PERSIAN = r'؀-ۿ‌'
 FA_LETTER = r'[ء-غف-ئپچژکگیة]'
 ZWNJ = '‌'
 
 ISSUES = []
+CURRENT_TOKENS = []
 
 def record(kind, line_no, snippet, suggestion):
+    if CURRENT_TOKENS:
+        snippet = restore_regions(snippet, CURRENT_TOKENS)
     ISSUES.append((kind, line_no, snippet.strip()[:80], suggestion))
 
 # ---------- safe fixes ----------
@@ -111,14 +123,14 @@ def find_hekasre(text):
     for m in re.finditer(r'(?<![‌آ-ی])([آ-ی]{2,})ه\s+([آ-ی]{2,})', text):
         stem, nxt = m.group(1), m.group(2)
         whole = stem + 'ه'
-        if whole in _HE_NOUNS or r(stem) == INF:
+        if whole.endswith('انه') or whole in _HE_NOUNS or r(stem) == INF:
             continue
         if r(whole) == INF:
             out.append((m.group(0), f'{stem}ِ {nxt}', 'A'))
     for m in re.finditer(r'(?<![‌آ-ی])([آ-ی]{2,})ه\s+(' + _PRON + r')(?![آ-ی])', text):
         stem, nxt = m.group(1), m.group(2)
         whole = stem + 'ه'
-        if whole in _HE_NOUNS or r(stem) == INF or r(whole) == INF:
+        if whole.endswith('انه') or whole in _HE_NOUNS or r(stem) == INF or r(whole) == INF:
             continue
         if r(whole) > r(stem) * 3 and r(whole) > 20000:
             out.append((m.group(0), f'{stem}ِ {nxt}', 'B'))
@@ -144,7 +156,7 @@ def fix_safe(text):
     text = re.sub(r'(?<=[' + PERSIAN + r'])\s*;\s*(?=[' + PERSIAN + r'])', '؛ ', text)
     # spacing hygiene: no space before Persian punctuation, one after
     text = re.sub(r' +([،؛؟!])', r'\1', text)
-    text = re.sub(r'([،؛])(?=[' + PERSIAN + r'])', r'\1 ', text)
+    text = re.sub(r'([،؛])(?=' + FA_LETTER + r')', r'\1 ', text)
     # double spaces (not at line start = keep markdown indents)
     text = re.sub(r'(?<=\S)  +(?=\S)', ' ', text)
     # missing tanvin on common Arabic loans: لطفا → لطفاً
@@ -192,6 +204,11 @@ def check_remaining(text):
             continue
         for ch, name in [('—', 'em dash'), ('–', 'en dash')]:
             if ch in line:
+                if ch == '–':
+                    # Skip en-dashes inside numerical/date/page ranges (e.g. ۱۲۰–۱۴۵ or 120-145)
+                    line_no_ranges = re.sub(r'[۰-۹0-9]\s*–\s*[۰-۹0-9]', '', line)
+                    if '–' not in line_no_ranges:
+                        continue
                 record('dash', i, line, f'{name}: replace with «،»/«؛»/() or restructure')
         if 'ة' in line:
             record('arabic-teh', i, line, 'ة: use ه/هٔ unless quoting Arabic')
@@ -270,7 +287,8 @@ def rhythm_report(text):
         out.append(('no-short-sentence',
                     'no sentence under 8 words. A short one after a long one is how Persian '
                     'prose breathes and where emphasis comes from.'))
-    if long_ == 0 and mean < 20:
+    is_technical = bool(re.search(r'```', text) or len(re.findall(r'`[^`\n]+`', text)) >= 3)
+    if long_ == 0 and mean < 20 and not is_technical:
         out.append(('no-long-sentence',
                     'every sentence is short-to-medium. One longer, flowing sentence adds '
                     'range — uniformity in either direction reads as generated.'))
@@ -305,6 +323,7 @@ def main():
     args = ap.parse_args()
 
     exit_code = 0
+    global CURRENT_TOKENS
     for path in args.files:
         ISSUES.clear()
         if path == '-':
@@ -313,25 +332,29 @@ def main():
             with open(path, encoding='utf-8') as f:
                 text = f.read()
         text = unicodedata.normalize('NFC', text)
+        masked, tokens = protect_regions(text)
+        CURRENT_TOKENS = tokens
 
         if args.fix:
-            text = fix_safe(text)
+            masked = fix_safe(masked)
             if args.aggressive:
-                text = fix_aggressive(text)
+                masked = fix_aggressive(masked)
             if args.digits:
-                text = fix_digits(text)
+                masked = fix_digits(masked)
+            text = restore_regions(masked, tokens)
             if path == '-':
                 sys.stdout.write(text)
             else:
                 with open(path, 'w', encoding='utf-8') as f:
                     f.write(text)
-            check_remaining(text)
+            re_masked, _ = protect_regions(text)
+            check_remaining(re_masked)
             label = 'remaining (need manual/contextual fixes)'
         else:
-            check_remaining(text)
+            check_remaining(masked)
             # also surface what --fix WOULD change
-            fixed = fix_safe(text)
-            if fixed != text:
+            fixed = fix_safe(masked)
+            if fixed != masked:
                 record('fixable', 0, '(multiple)', 'safe auto-fixes available: rerun with --fix')
             label = 'issues'
 
