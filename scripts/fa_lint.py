@@ -31,15 +31,36 @@ Report-only (never auto-fixed — need human/context judgment):
 
 Exit code: 0 = clean, 1 = issues found (check) / unfixable issues remain (fix).
 """
-import argparse, re, sys, unicodedata
+import argparse, os, re, sys, unicodedata
+
+try:
+    from scripts.persian_cleanup import protect_regions, restore_regions
+except ImportError:
+    try:
+        from persian_cleanup import protect_regions, restore_regions
+    except ImportError:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from persian_cleanup import protect_regions, restore_regions
 
 PERSIAN = r'؀-ۿ‌'
 FA_LETTER = r'[ء-غف-ئپچژکگیة]'
 ZWNJ = '‌'
 
+_LEXICAL_COMPARATIVES = {"بهتر", "بیشتر", "کمتر", "پیشتر", "بدتر", "مهتر", "کهتر"}
+_COORD_COMP_AHEAD = re.compile(r"^\s+و\s+([ء-یء-۾]+)(?:\s+تر\b|\u200cتر\b)")
+
+def _is_coord_comparative(tail: str) -> bool:
+    if _COORD_COMP_AHEAD.match(tail):
+        return True
+    m_lex = re.match(r"^\s+و\s+([ء-یء-۾]+)\b", tail)
+    return bool(m_lex and m_lex.group(1) in _LEXICAL_COMPARATIVES)
+
 ISSUES = []
+CURRENT_TOKENS = []
 
 def record(kind, line_no, snippet, suggestion):
+    if CURRENT_TOKENS:
+        snippet = restore_regions(snippet, CURRENT_TOKENS)
     ISSUES.append((kind, line_no, snippet.strip()[:80], suggestion))
 
 # ---------- safe fixes ----------
@@ -127,14 +148,14 @@ def find_hekasre(text):
     for m in re.finditer(r'(?<![‌آ-ی])([آ-ی]{2,})ه\s+([آ-ی]{2,})', text):
         stem, nxt = m.group(1), m.group(2)
         whole = stem + 'ه'
-        if whole in _HE_NOUNS or r(stem) == INF:
+        if whole.endswith('انه') or whole in _HE_NOUNS or r(stem) == INF:
             continue
         if r(whole) == INF:
             out.append((m.group(0), f'{stem}ِ {nxt}', 'A'))
     for m in re.finditer(r'(?<![‌آ-ی])([آ-ی]{2,})ه\s+(' + _PRON + r')(?![آ-ی])', text):
         stem, nxt = m.group(1), m.group(2)
         whole = stem + 'ه'
-        if whole in _HE_NOUNS or r(stem) == INF or r(whole) == INF:
+        if whole.endswith('انه') or whole in _HE_NOUNS or r(stem) == INF or r(whole) == INF:
             continue
         if r(whole) > r(stem) * 3 and r(whole) > 20000:
             out.append((m.group(0), f'{stem}ِ {nxt}', 'B'))
@@ -163,7 +184,7 @@ def fix_safe(text):
     # «- ! ...», a table cell «| ؟ |» or an indent are separators, and gluing
     # the mark to them («-!») silently breaks the document's structure.
     text = re.sub(r'(?<=[\w)\]»"\'])[ \t]+([،؛؟!])', r'\1', text)
-    text = re.sub(r'([،؛])(?=[' + PERSIAN + r'])', r'\1 ', text)
+    text = re.sub(r'([،؛])(?=' + FA_LETTER + r')', r'\1 ', text)
     # double spaces (not at line start = keep markdown indents)
     text = re.sub(r'(?<=\S)  +(?=\S)', ' ', text)
     # missing tanvin on common Arabic loans: لطفا → لطفاً
@@ -172,9 +193,19 @@ def fix_safe(text):
     return text
 
 def fix_aggressive(text):
-    # comparative/superlative: بزرگ تر → بزرگ‌تر (skip «تر و تازه»)
-    text = re.sub(r'(' + FA_LETTER + r'{2,}) (تر|ترین)\b(?! و تازه)',
-                  r'\1' + ZWNJ + r'\2', text)
+    # comparative/superlative: بزرگ تر → بزرگ‌تر
+    text = re.sub(r'(' + FA_LETTER + r'{2,}) ترین\b', r'\1' + ZWNJ + 'ترین', text)
+
+    def _join_tar(m):
+        w = m.group(1)
+        tail = text[m.end():m.end() + 40]
+        if tail.startswith(" و "):
+            if _is_coord_comparative(tail):
+                return w + ZWNJ + "تر"
+            return m.group(0)
+        return w + ZWNJ + "تر"
+
+    text = re.sub(r'(' + FA_LETTER + r'{2,})\s+تر\b', _join_tar, text)
     # straight quotes wrapping Persian → گیومه
     text = re.sub(r'"([^"\n]*' + FA_LETTER + r'[^"\n]*)"', r'«\1»', text)
     return text
@@ -342,8 +373,14 @@ def check_remaining(text):
             record('zwnj-mi', i, line, 'می + space → می + ZWNJ (نیم‌فاصله)')
         if re.search(r'(' + FA_LETTER + r') ها\b', line):
             record('zwnj-ha', i, line, 'plural ها: use ZWNJ (کتاب‌ها) — ignore if emphasis particle')
-        if re.search(r'(' + FA_LETTER + r'{2,}) (تر|ترین)\b(?! و تازه)', line):
-            record('zwnj-tar', i, line, 'comparative تر/ترین: use ZWNJ (بزرگ‌تر)')
+        if re.search(r'(' + FA_LETTER + r'{2,}) ترین\b', line):
+            record('zwnj-tar', i, line, 'comparative ترین: use ZWNJ (بزرگ‌ترین)')
+        for m in re.finditer(r'(' + FA_LETTER + r'{2,})\s+تر\b', line):
+            tail = line[m.end():m.end() + 40]
+            if tail.startswith(" و ") and not _is_coord_comparative(tail):
+                continue
+            record('zwnj-tar', i, line, 'comparative تر: use ZWNJ (بزرگ‌تر)')
+            break
         if re.search(r'"[^"\n]*' + FA_LETTER, line):
             record('quotes', i, line, 'straight quotes around Persian → «گیومه»')
         # ASCII digits touching Persian words (not urls/emails/versions/code).
@@ -389,7 +426,8 @@ def rhythm_report(text):
         out.append(('no-short-sentence',
                     'no sentence under 8 words. A short one after a long one is how Persian '
                     'prose breathes and where emphasis comes from.'))
-    if long_ == 0 and mean < 20:
+    is_technical = bool(re.search(r'```', text) or len(re.findall(r'`[^`\n]+`', text)) >= 3)
+    if long_ == 0 and mean < 20 and not is_technical:
         out.append(('no-long-sentence',
                     'every sentence is short-to-medium. One longer, flowing sentence adds '
                     'range — uniformity in either direction reads as generated.'))
@@ -424,6 +462,7 @@ def main():
     args = ap.parse_args()
 
     exit_code = 0
+    global CURRENT_TOKENS
     for path in args.files:
         ISSUES.clear()
         if path == '-':
@@ -432,30 +471,34 @@ def main():
             with open(path, encoding='utf-8') as f:
                 text = f.read()
         text = unicodedata.normalize('NFC', text)
+        masked, tokens = protect_regions(text)
+        CURRENT_TOKENS = tokens
 
         if args.fix:
             original = text
-            text = fix_safe(text)
+            masked = fix_safe(masked)
             if args.aggressive:
-                text = fix_aggressive(text)
+                masked = fix_aggressive(masked)
             if args.digits:
-                text = fix_digits(text)
+                masked = fix_digits(masked)
+            text = restore_regions(masked, tokens)
             text = _preserve_ignored(original, text)
             if path == '-':
                 sys.stdout.write(text)
             else:
                 with open(path, 'w', encoding='utf-8') as f:
                     f.write(text)
-            check_remaining(text)
+            re_masked, _ = protect_regions(text)
+            check_remaining(re_masked)
             label = 'remaining (need manual/contextual fixes)'
         else:
-            check_remaining(text)
+            check_remaining(masked)
             # Also surface what --fix WOULD change — but blank out suppressed
             # lines first, or a deliberate error example keeps advertising a
             # fix that must never be applied to it.
-            ignored = _lint_ignored_lines(text)
+            ignored = _lint_ignored_lines(masked)
             preview = '\n'.join('' if i in ignored else line
-                                for i, line in enumerate(text.split('\n'), 1))
+                                for i, line in enumerate(masked.split('\n'), 1))
             if fix_safe(preview) != preview:
                 record('fixable', 0, '(multiple)', 'safe auto-fixes available: rerun with --fix')
             label = 'issues'

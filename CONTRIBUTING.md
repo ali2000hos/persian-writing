@@ -123,3 +123,14 @@ cherry-pick, which is a worse outcome for everyone than two clean commits.
 
 Describe the bug you hit, and include the input that triggered it. A failing
 example is worth more than a paragraph of explanation.
+
+## Tests
+
+```bash
+python3 -m unittest discover -s tests -t .
+```
+
+Tests live in `tests/` and never ship inside the `.skill` package. A test may
+use a dev-only library (for example `python-docx` to build a fixture), but it
+must skip cleanly when that library is missing — the toolkit itself stays
+standard-library only.

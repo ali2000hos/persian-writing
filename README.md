@@ -92,6 +92,23 @@ After editing SKILL.md or references, regenerate the single-file edition:
 
 ## Version history
 
+- **1.3.8** — `--edit` stopped corrupting the non-prose inside Persian
+  documents. URLs (`?lang=fa` became `؟lang=fa`), email addresses, IBANs,
+  international phone numbers, software versions, DOIs and English citations
+  are now protected before the typographic pass, so their digits and
+  punctuation stay exact. Fixed: ezafe on a final ه produced a doubled heh
+  (`خانهۀ` → `خانهٔ`); the prepositions بی/در/بر were fused onto verbs
+  (`در گفتن` → `درگفتن`); `أ` and `ؤ` were stripped of hamza, turning
+  standard spellings like مؤلف، تأکید، سؤال into nonstandard ones; «تر و تازه»
+  got a ZWNJ; commas inside numbers now become the Persian thousands separator
+  (`۴٬۷۵۰٬۰۰۰`); deliberate wide spacing (signature lines, aligned columns)
+  survives. `fa_lint.py` shares the same protected regions, no longer flags
+  -انه adverbs (همکارانه) as هکسره, and skips the rhythm warning on technical
+  text. `verify_docx.py` reads style-level `w:rtl`/`w:cs`/`w:szCs` from
+  `styles.xml`, and `verify_pdf.py` ignores en-dashes in numeric ranges.
+  First test suite added under `tests/`. Contributed by
+  [@nimagh-18](https://github.com/nimagh-18) in
+  [#3](https://github.com/ali2000hos/persian-writing/pull/3).
 - **1.3.7** — the linter stopped crying wolf. Unicode codepoint notation
   (`U+06CC`) was reported as Latin digits and rewritten by `convert_digits`
   into `U+۰۶CC`, which damaged the typography documents this toolkit exists

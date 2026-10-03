@@ -80,7 +80,7 @@ from typing import Callable, Iterable, List, Optional, Sequence, Union
 # Constants
 # ---------------------------------------------------------------------------
 
-__version__ = "1.3.7"  # keep in sync with SKILL.md and .claude-plugin/plugin.json
+__version__ = "1.3.8"  # keep in sync with SKILL.md and .claude-plugin/plugin.json
 
 # Zero-Width Non-Joiner (نیم‌فاصله) — the heart of Persian typography
 ZWNJ = "\u200c"
@@ -95,12 +95,12 @@ _AR_TO_FA = {ord(a): f for a, f in zip(AR_DIGITS, FA_DIGITS)}
 _FA_TO_EN = {ord(f): e for f, e in zip(FA_DIGITS, EN_DIGITS)}
 
 # Arabic characters that have canonical Persian equivalents
+# Note: أ and ؤ are standard in Persian orthography (مؤلف، تأکید، سؤال)
+# and must NOT be stripped of hamza.
 _ARABIC_TO_PERSIAN = {
     ord("ي"): "ی",  # Arabic yeh → Persian yeh
     ord("ك"): "ک",  # Arabic kaf → Persian kaf
-    ord("ؤ"): "و",
-    ord("إ"): "ا",
-    ord("أ"): "ا",
+    ord("إ"): "ا",  # Arabic alef with hamza below → alef
     ord("آ"): "آ",
     ord("ة"): "ه",  # ta marbuta → heh
     ord("ٰ"): "",    # superscript alef
@@ -134,8 +134,10 @@ _PUNCT_TO_FA = {
 # Common Persian verb prefixes that take ZWNJ
 _VERB_PREFIXES = ("می", "نمی", "بر", "باز", "بی", "می\u200c")  # last one is already-correct
 
-# Preverb particles that join the verb stem with ZWNJ removal (compound verbs)
-_COMPOUND_PREFIXES = ("فرا", "باز", "در", "فرورد", "بر", "بی", "وا")
+# Preverb particles that join the verb stem with ZWNJ removal (compound verbs).
+# 'در', 'بر', 'بی' are excluded because they are common prepositions/adjectives
+# (e.g. 'بی داشتن', 'در گفتن', 'بر داشتن') whose automatic joining corrupts prose.
+_COMPOUND_PREFIXES = ("فرا", "باز", "فرورد", "وا")
 
 # Suffixes that attach with ZWNJ
 _SUFFIXES = ("تر", "ترین", "ها", "های", "هایی", "هایی که", "ام", "ات", "اش")
@@ -180,10 +182,11 @@ _REPEATED_PUNCT = re.compile(r"([!?؟])\1+")
 # merging paragraphs and destroying Markdown structure (lists, headings, code
 # fences). That silent damage is worse than the spacing it fixes.
 _PUNCT_SPACE_BEFORE = re.compile(r"[ \t]+([!?؟:;,؛،.])")
-_PUNCT_SPACE_AFTER_DOT = re.compile(r"([،؛:!؟.])[ \t]{2,}")
+_PUNCT_SPACE_AFTER_DOT = re.compile(r"([،؛:!?.])[ \t]{2,4}(?![ \t])")
 
-# Multiple consecutive spaces (preserve newlines)
+# Accidental consecutive spaces (2-4 spaces to collapse, while preserving 5+ for column alignment)
 _MULTI_SPACE = re.compile(r"[ \t]{2,}")
+_ACCIDENTAL_SPACE = re.compile(r"(?<![ \t])[ \t]{2,4}(?![ \t])")
 
 # ---------------------------------------------------------------------------
 # Protected regions
@@ -206,6 +209,39 @@ _FENCED_CODE = re.compile(r"^[ \t]*(`{3,}|~{3,})[^\n]*\n(?:.*?\n)??[ \t]*\1[^\n]
 _TABLE_ROW = re.compile(r"^[ \t]*\|.*$", re.MULTILINE)
 _INLINE_CODE = re.compile(r"`[^`\n]+`")
 
+# Additional regions that must stay Latin/exact: URLs, emails, phone numbers,
+# IBANs, DOIs, English citations, software versions, and technical identifiers.
+_PROTECTED_PATTERNS = (
+    _FENCED_CODE,
+    _TABLE_ROW,
+    _INLINE_CODE,
+    # English bibliography lines starting with [digit] followed by Latin author
+    re.compile(r"^[ \t]*\[\d+\]\s+[A-Za-z].*$", re.MULTILINE),
+    # Full URLs (http/https/www)
+    re.compile(r"https?://[^\s)\]}>\"'\u060c\u061b\u061f]+|www\.[^\s)\]}>\"'\u060c\u061b\u061f]+"),
+    # Email addresses
+    re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"),
+    # IBAN
+    re.compile(r"\b[A-Z]{2}\d{2}[A-Za-z0-9]{12,30}\b"),
+    # International phone numbers with + or 00
+    re.compile(r"(?<!\w)(?:\+\d{1,4}[-.\s]?(?:\(?\d{1,4}\)?[-.\s]?)?\d{3,4}[-.\s]?\d{3,4}|00\d{2,4}[-.\s]?\d{3,4}[-.\s]?\d{3,4})\b"),
+    # DOIs
+    re.compile(r"\b(?:doi:\s*)?10\.\d{4,9}/[-._;()/:A-Za-z0-9]+"),
+    # English parenthetical citations (e.g. (Habermas, 1984: 86))
+    re.compile(r"\([A-Za-z][^)\n]*\d{4}[^)\n]*\)"),
+    # Software versions: standalone starting with v/V (v1.28.2), or following a Latin name (Python 3.11, Ubuntu 22.04)
+    # Standalone decimals in Persian prose (e.g. 2.5 میلیون تومان) are intentionally NOT protected.
+    re.compile(r"\b[vV]\d+(?:\.\d+)+(?:[a-zA-Z0-9_.-]*)\b"),
+    re.compile(r"\b[A-Za-z][A-Za-z0-9_.-]*[ \t:=]+\d+(?:\.\d+)+(?:[a-zA-Z0-9_.-]*)\b"),
+    # Alphanumeric hardware/model tokens: H100, B200, WH-1000XM5, MP3, QN1, V1, X1, β1, etc.
+    re.compile(r"\b[A-Za-z0-9]+-[A-Za-z0-9-]*\d+[A-Za-z0-9-]*\b"),
+    re.compile(r"\b[A-Za-z\u0370-\u03ff\u1f00-\u1fff]+[0-9]+[A-Za-z0-9]*\b"),
+    # HTTP status codes
+    re.compile(r"\bHTTP\s+\d{3}\b"),
+    # Technical units
+    re.compile(r"\b\d+(?:\.\d+)?\s*(?:mm|cm|m|km|kbps|Mbps|Gbps|kHz|MHz|GHz|ms|s|Mi|Gi|MB|GB)\b"),
+)
+
 
 def _encode_index(i: int) -> str:
     """Index → letters only (no digits, which convert_digits would rewrite)."""
@@ -218,7 +254,8 @@ def _encode_index(i: int) -> str:
 
 
 def protect_regions(text: str):
-    """Replace code fences, table rows and inline code with placeholders.
+    """Replace code fences, table rows, inline code, URLs, emails, versions,
+    and other technical tokens with placeholders.
 
     Returns (masked_text, tokens). Restore with restore_regions().
     """
@@ -226,18 +263,29 @@ def protect_regions(text: str):
 
     def _stash(m):
         tokens.append(m.group(0))
-        return f"{_PROTECT_OPEN}{_encode_index(len(tokens) - 1)}{_PROTECT_CLOSE}"
+        return _placeholder(len(tokens) - 1, m.group(0))
 
-    for pattern in (_FENCED_CODE, _TABLE_ROW, _INLINE_CODE):
+    for pattern in _PROTECTED_PATTERNS:
         text = pattern.sub(_stash, text)
     return text, tokens
+
+
+def _placeholder(i: int, original: str) -> str:
+    """Placeholder for a protected region, carrying the region's newlines.
+
+    A fenced code block spans many lines; collapsing it to a one-line token
+    shifts every later line number, so the linter reports issues on the wrong
+    line and line-based suppressions (fa-lint-ignore) point at the wrong text.
+    Keeping the newlines inside the placeholder keeps the masked text
+    line-aligned with the original.
+    """
+    return f"{_PROTECT_OPEN}{_encode_index(i)}{chr(10) * original.count(chr(10))}{_PROTECT_CLOSE}"
 
 
 def restore_regions(text: str, tokens: Sequence[str]) -> str:
     """Put the protected regions back exactly as they were."""
     for i, original in enumerate(tokens):
-        text = text.replace(
-            f"{_PROTECT_OPEN}{_encode_index(i)}{_PROTECT_CLOSE}", original)
+        text = text.replace(_placeholder(i, original), original)
     return text
 
 # Collapsed-letter pattern: عااااللللیییی → عالی (3+ repeats → 1)
@@ -528,14 +576,16 @@ def strip_characters(text: str, keep: Union[str, Sequence[str]] = "fa") -> str:
 
 
 def remove_extra_spaces(text: str) -> str:
-    """Collapse multiple spaces/tabs into one. Preserve newlines."""
-    # Collapse runs of spaces INSIDE each line, but never the leading indent:
-    # indentation carries meaning (nested lists, indented code, YAML), and
-    # flattening it silently reshapes the document.
+    """Collapse accidental multiple spaces/tabs (2-4 spaces) into one.
+    Preserves newlines, markdown indentation, and wide spacing (5+ spaces)
+    used for multi-column / signature alignment.
+    """
+    # Collapse runs of 2-4 spaces INSIDE each line, but never the leading indent
+    # or wide spacing (5+ spaces) used for columnar/signature alignment.
     lines = []
     for line in text.split("\n"):
         indent = re.match(r"[ \t]*", line).group(0)
-        body = _MULTI_SPACE.sub(" ", line[len(indent):]).rstrip()
+        body = _ACCIDENTAL_SPACE.sub(" ", line[len(indent):]).rstrip()
         lines.append(indent + body if body else "")
     text = "\n".join(lines)
     # Trim surrounding blank space, but keep one trailing newline if the input
@@ -560,7 +610,10 @@ def fix_arabic_chars(text: str) -> str:
 def fix_persian_punctuation(text: str) -> str:
     """Convert English punctuation to Persian equivalents:
     ? → ؟, ; → ؛, , → ،, and "..." → «...» (paired guillemets).
+    English comma between digits is converted to Persian thousands separator (٬ U+066C).
     """
+    # Convert comma between digits to Persian thousands separator (٬ U+066C)
+    text = re.sub(r"(?<=[0-9۰-۹]),(?=[0-9۰-۹])", "\u066c", text)
     text = text.replace("?", "؟").replace(";", "؛").replace(",", "،")
     # Paired double quotes → guillemets
     # Find pairs of " and replace them with « »
@@ -591,17 +644,12 @@ def fix_punctuation_spacing(text: str) -> str:
 
 
 def fix_ezafe(text: str) -> str:
-    """Convert the ezafe marker 'ی' (when written as a separate ZWNJ-joined
-    character) to the proper 'ـِ' kasre or simply to 'ی' without ZWNJ.
-
-    Paknevis rule: خانه‌ی → خانهٔ (hamza above)
-    We use the Unicode 'ARABIC LETTER HEH WITH YEH ABOVE' (U+06C0) which is
-    the typographically correct Persian ezafe form.
+    """Convert the ezafe marker 'ی' after silent heh (خانه‌ی → خانهٔ).
+    Uses combining ARABIC HAMZA ABOVE (U+0654), which attaches to the final heh
+    without duplicating the letter.
     """
-    # خانه‌ی → خانهٔ  (U+06C0 = ARABIC LETTER HEH WITH YEH ABOVE)
-    text = re.sub(r"(\S)" + ZWNJ + r"ی\b", r"\1" + "\u06C0", text)
-    # Also handle خانه ی (with regular space) → خانهٔ only when the next
-    # word starts with a non-Persian-letter boundary.
+    # خانه‌ی → خانهٔ  (U+0654 = combining ARABIC HAMZA ABOVE on existing heh)
+    text = re.sub(r"([هة])" + ZWNJ + r"ی\b", lambda m: m.group(1) + "\u0654", text)
     return text
 
 
@@ -647,17 +695,55 @@ def fix_zwnj_compound_verbs(text: str) -> str:
     return pattern.sub(r"\1\2", text)
 
 
+_LEXICAL_COMPARATIVES = {"بهتر", "بیشتر", "کمتر", "پیشتر", "بدتر", "مهتر", "کهتر"}
+_COORD_COMP_AHEAD = re.compile(r"^\s+و\s+([ء-یء-۾]+)(?:\s+تر\b|\u200cتر\b)")
+
+
+def _is_coord_comparative(tail: str) -> bool:
+    """Check if ' و Y' represents a coordinated comparative (e.g. ' و پیچیده‌تر', ' و بهتر')."""
+    if _COORD_COMP_AHEAD.match(tail):
+        return True
+    m_lex = re.match(r"^\s+و\s+([ء-یء-۾]+)\b", tail)
+    return bool(m_lex and m_lex.group(1) in _LEXICAL_COMPARATIVES)
+
+
 def fix_zwnj_suffixes(text: str) -> str:
     """Insert ZWNJ before comparative/superlative/plural suffixes.
     'کثیف تر' → 'کثیف‌تر', 'کتاب ها' → 'کتاب‌ها', 'خوب ترین' → 'خوب‌ترین'.
+
+    Rule-based 'تر':
+    - Coordinated comparatives ('سخت تر و پیچیده تر', 'قوی تر و شجاع تر', 'بزرگ تر و بهتر'):
+      both 'تر' elements are comparative suffixes and receive ZWNJ.
+    - Coordinated non-comparative compounds ('تر و تمیز', 'تر و تازه', 'تر و فرز', 'تر و خشک'):
+      'تَر' is an independent adjective in a hendiadys compound; it stays detached.
+      Also un-joins any mistakenly attached 'X‌تر و Y' (e.g. 'سایت‌تر و تمیز' → 'سایت تر و تمیز').
     """
-    # Match a Persian word followed by space + suffix at word boundary.
-    # Avoid inserting ZWNJ if it's already there.
-    suffix_alt = "تر|ترین|ها|های|هایی"
-    pattern = re.compile(
-        r"([ء-یء-۾][ء-یء-۾]*?)\s+(" + suffix_alt + r")\b"
-    )
-    return pattern.sub(r"\1" + ZWNJ + r"\2", text)
+    # 1. plural suffixes: ها, های, هایی
+    text = re.sub(r"([ء-یء-۾]+)\s+(ها(?:ی|یی)?)\b", r"\1" + ZWNJ + r"\2", text)
+    # 2. superlative suffix 'ترین' (always a suffix, never independent)
+    text = re.sub(r"([ء-یء-۾]{2,})\s+(ترین)\b", r"\1" + ZWNJ + r"\2", text)
+
+    # 3. un-join mistakenly attached 'تر' ONLY in non-comparative idioms (e.g. 'سایت‌تر و تمیز' → 'سایت تر و تمیز')
+    def _unjoin_if_idiom(m):
+        w, tail = m.group(1), m.group(2)
+        if _is_coord_comparative(" و " + tail):
+            return m.group(0)  # Keep joined: سخت‌تر و پیچیده‌تر
+        return f"{w} تر و {tail}"
+
+    text = re.sub(r"([ء-یء-۾]+)" + ZWNJ + r"تر\s+و\s+([ء-یء-۾]+)", _unjoin_if_idiom, text)
+
+    # 4. comparative suffix 'تر':
+    def _join_tar(m):
+        w = m.group(1)
+        tail = text[m.end():m.end() + 40]
+        if tail.startswith(" و "):
+            if _is_coord_comparative(tail):
+                return w + ZWNJ + "تر"
+            return m.group(0)  # Keep detached: تر و تمیز
+        return w + ZWNJ + "تر"
+
+    text = re.sub(r"([ء-یء-۾]{2,})\s+تر\b", _join_tar, text)
+    return text
 
 
 def fix_zwnj_possessives(text: str) -> str:
