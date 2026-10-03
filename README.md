@@ -92,6 +92,19 @@ After editing SKILL.md or references, regenerate the single-file edition:
 
 ## Version history
 
+- **1.4.0** — source-faithful academic paraphrase. Rewriting a paper into a
+  thesis chapter now follows one rule: change wording and structure only. No
+  inference or bridging link is added, nothing is dropped, and every qualifier
+  keeps its strength: a mapping table for approximately, mainly, may, suggest,
+  up to, at least, significantly and more, plus the four drifts that change a
+  finding (rounding, hardening, softening, scope creep). The researcher's own
+  reasoning is marked «این بخش در مقاله وجود ندارد» rather than folded in, and
+  a four-question fidelity check runs before handover (academic.md §5.5). Also
+  new: instruction-residue and decorative-vocabulary tells, list-vs-prose rules
+  for thesis parts, and §7.5 on house style. A department's banned-word list is
+  honoured, but never at the cost of a hedge the source has, and a negative
+  finding is never rewritten as a positive one. The linter no longer reads
+  section references (§5.5) as Latin digits.
 - **1.3.9** — Persian text that mixes in English words no longer renders
   backwards. Chat apps, GitHub, Telegram and most editors set a paragraph's
   direction from its first letter, so a Persian line opening with a Latin word

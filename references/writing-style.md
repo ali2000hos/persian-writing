@@ -161,7 +161,8 @@ The single loudest tell. Also: به شمار می‌رود، محسوب می‌�
 
 ### T3. Significance inflation
 نقش بسزایی ایفا می‌کند، از اهمیت ویژه‌ای برخوردار است، گامی مهم در راستای،
-جایگاه ویژه‌ای دارد، تحولی شگرف. Replace with the concrete claim.
+جایگاه ویژه‌ای دارد، تحولی شگرف، انقلابی، تحول‌آفرین، شگفت‌انگیز. Replace
+with the concrete claim.
 
 > ❌ سئو نقش بسزایی در موفقیت کسب‌وکار شما ایفا می‌کند.
 > ✅ اگر در نتایج گوگل دیده نشوید، مشتری هم ندارید — سئو یعنی همین.
@@ -232,6 +233,8 @@ and then plain bullets, no bold-colon headers.
 ### T17. Sycophantic chat residue
 سؤال بسیار خوبی است!، البته!، خوشحال می‌شوم کمک کنم، امیدوارم مفید بوده باشد —
 chatbot correspondence pasted into content. Delete on sight.
+Same for instruction echoes: طبق درخواست، بر اساس توضیحات شما، مطابق دستور
+ارائه‌شده — the text answers a prompt nobody else can see.
 
 ### T18. Universal tells (from the English humanizer — they transfer)
 Elegant variation (وب‌سایت/سایت/پلتفرم/پورتال cycling for one thing);

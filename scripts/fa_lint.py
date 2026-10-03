@@ -223,6 +223,8 @@ def _skip_token(tok):
     """
     if _CODEPOINT.search(tok):
         return True
+    if '§' in tok:          # section references: §5.5, §9
+        return True
     return bool(re.search(r'https?://|www\.|@|[/\\]|\.[a-z]{2,}|`', tok)
                 or re.fullmatch(r'\+?\d+(\.\d+)+[.,;،]?', tok))   # versions like 6.5
 

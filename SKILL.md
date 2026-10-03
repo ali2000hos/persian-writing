@@ -14,7 +14,7 @@ description: >
   like فارسی, Farsi, Persian, Iran, RTL, راست‌چین, نیم‌فاصله, ویرایش, مقاله,
   پایان‌نامه, سئو, کپشن, Vazirmatn — even if the user never mentions this skill.
 metadata:
-  version: 1.3.9
+  version: 1.4.0
 license: MIT (bundled fonts under SIL OFL)
 compatibility: >
   Any agent that reads Markdown skills (Claude, Claude Code, Cursor, Codex,
@@ -114,6 +114,11 @@ Full guide in `references/writing-style.md`. The core moves:
    پیش‌بینی / ادعا; never invent a statistic, version, price, or quote to fill
    a section; surface contradictions instead of silently resolving them; ask
    one question rather than guessing (content-structures.md §3).
+   When paraphrasing a paper (thesis chapters especially), change only wording
+   and structure: add no inference or bridging link, keep every qualifier
+   (حدود، عمدتاً، ممکن است، تا، حداقل، معنادار) and every number exactly as the
+   source states it, and mark the researcher's own reasoning «این بخش در مقاله
+   وجود ندارد» instead of folding it in (academic.md §5.5).
 7. **The native test:** would an Iranian screenshot this as «متن هوش مصنوعی»?
    If yes, rewrite before delivering. Two properties cause most of it:
    *predictability* (the expected collocation every time — اهمیتِ ویژه، نقشِ

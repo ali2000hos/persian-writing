@@ -119,6 +119,11 @@ Full guide in the «Writing style: registers & de-AI-ing» part below. The core 
    پیش‌بینی / ادعا; never invent a statistic, version, price, or quote to fill
    a section; surface contradictions instead of silently resolving them; ask
    one question rather than guessing (content-structures.md §3).
+   When paraphrasing a paper (thesis chapters especially), change only wording
+   and structure: add no inference or bridging link, keep every qualifier
+   (حدود، عمدتاً، ممکن است، تا، حداقل، معنادار) and every number exactly as the
+   source states it, and mark the researcher's own reasoning «این بخش در مقاله
+   وجود ندارد» instead of folding it in (academic.md §5.5).
 7. **The native test:** would an Iranian screenshot this as «متن هوش مصنوعی»?
    If yes, rewrite before delivering. Two properties cause most of it:
    *predictability* (the expected collocation every time — اهمیتِ ویژه، نقشِ
@@ -433,7 +438,8 @@ The single loudest tell. Also: به شمار می‌رود، محسوب می‌�
 
 ### T3. Significance inflation
 نقش بسزایی ایفا می‌کند، از اهمیت ویژه‌ای برخوردار است، گامی مهم در راستای،
-جایگاه ویژه‌ای دارد، تحولی شگرف. Replace with the concrete claim.
+جایگاه ویژه‌ای دارد، تحولی شگرف، انقلابی، تحول‌آفرین، شگفت‌انگیز. Replace
+with the concrete claim.
 
 > ❌ سئو نقش بسزایی در موفقیت کسب‌وکار شما ایفا می‌کند.
 > ✅ اگر در نتایج گوگل دیده نشوید، مشتری هم ندارید — سئو یعنی همین.
@@ -504,6 +510,8 @@ and then plain bullets, no bold-colon headers.
 ### T17. Sycophantic chat residue
 سؤال بسیار خوبی است!، البته!، خوشحال می‌شوم کمک کنم، امیدوارم مفید بوده باشد —
 chatbot correspondence pasted into content. Delete on sight.
+Same for instruction echoes: طبق درخواست، بر اساس توضیحات شما، مطابق دستور
+ارائه‌شده — the text answers a prompt nobody else can see.
 
 ### T18. Universal tells (from the English humanizer — they transfer)
 Elegant variation (وب‌سایت/سایت/پلتفرم/پورتال cycling for one thing);
@@ -1260,6 +1268,26 @@ consistency is a virtue: pick ONE term per concept (یادگیری ماشین, n
 alternating with فراگیری ماشینی and ماشین لرنینگ) and repeat it. Synonym
 cycling reads as AI *and* confuses reviewers.
 
+**A7. Instruction residue.** Phrases that show the text was produced in answer
+to a request: «طبق درخواست»، «بر اساس توضیحات شما»، «در ادامه‌ی خواسته‌ی
+شما»، «مطابق دستور ارائه‌شده». They are leftovers of a conversation, not part
+of a thesis, and they go. «همان‌طور که گفته شد» is fine only when it points to
+an earlier section of the same text. Whether AI assistance must be declared is
+a separate matter, handled through the institution's disclosure route (§9.5),
+not by stray phrases.
+
+**A8. Decorative academic vocabulary.** Words that machine-written Persian
+papers lean on until they mean nothing: جامع، کلیدی، نظام‌مند (as praise, not
+as a method name), محور and حول محور، پیوند (for every relation),
+«تصویر روشنی از ... ترسیم می‌کند»، «از دل ... به دست می‌آید»، «گام‌به‌گام».
+Replace each with the specific relation or result. Many advisors keep a banned
+list of exactly these; see §7.5.
+
+**A9. Slashes and hyphens between words.** «کیفی/کمی»، «معلم‌-دانش‌آموز» are
+note-taking shorthand. Write the relation out: «کیفی و کمی»، «کیفی یا کمی»،
+«رابطه‌ی معلم و دانش‌آموز». Hyphens stay in section numbering and fixed
+compound labels.
+
 ## 4. Terminology and Latin material
 
 - First use: Persian term + Latin in parentheses or footnote —
@@ -1285,6 +1313,95 @@ cycling reads as AI *and* confuses reviewers.
   DOI is fatal in this genre. Vague authority («کارشناسان معتقدند») is
   doubly banned in academic text.
 
+## 5.5 Rewriting from a source: fidelity and the strength of every claim
+
+The commonest academic task given to an AI is paraphrasing a paper into a
+thesis chapter. It is also where the quietest damage happens: the Persian
+reads well, and the source no longer says what the chapter claims it says.
+
+**The governing rule.** A paraphrase changes only the wording and the sentence
+structure. Nothing is added, nothing is dropped, and the strength, scope and
+certainty of every claim stay exactly as the source has them.
+
+**1. Add nothing.** No inference, interpretation, conclusion, explanation or
+new connection, neither the model's nor the researcher's, enters text that is
+attributed to the source. This includes the "helpful" bridge sentence written
+to make two paragraphs flow or to complete an argument: if the source does not
+make that link, the paraphrase does not either. A paragraph that reads a little
+less smoothly is the correct price.
+
+**2. Separate the researcher's own reasoning.** When revising an existing
+chapter against its source, sentences that are the researcher's inference or
+analysis are not silently kept inside the source-based text:
+
+1. separate them from the material attributed to the paper
+2. mark them with «این بخش در مقاله وجود ندارد»
+3. do not carry them automatically into the rewritten, source-based version
+4. if the claim needs support, mark it «نیازمند منبع مستقل است» and leave it
+   for the researcher to source.
+
+The researcher's own interpretation is legitimate. It belongs in the بحث
+chapter, in the researcher's voice, not presented as what the paper found.
+
+**3. Preserve every qualifier.** Each hedge, quantity, frequency and degree in
+the source keeps its meaning in Persian. Neither drop one nor add one:
+
+<!-- fa-lint-ignore-start -->
+
+| Source | Persian | Note |
+|---|---|---|
+| approximately, about | حدود، تقریباً | |
+| nearly, almost | نزدیک به، تقریباً | |
+| mainly, primarily, largely | عمدتاً، در درجه‌ی نخست | |
+| partly, to some extent | تا حدی | |
+| in most cases | در بیشتر موارد | |
+| generally | به‌طور کلی | only if the source itself generalizes |
+| may, might | ممکن است | |
+| can, could | می‌تواند | capability, not likelihood |
+| likely, probably | احتمالاً، به احتمال زیاد | |
+| suggest, indicate | حاکی از آن است، نشان می‌دهد که احتمالاً | weaker than show; never «ثابت می‌کند» |
+| show, demonstrate | نشان می‌دهد | |
+| up to | تا | a ceiling, not a typical value |
+| at least / at most | حداقل / حداکثر | |
+| on average | به‌طور متوسط | |
+| significantly | به‌طور معنادار | only for statistical significance |
+| no significant difference | تفاوت معناداری مشاهده نشد | NOT «یکسان بودند» |
+| associated with, correlated with | با ... ارتباط داشت | NOT «باعث ... شد» |
+| in this sample, among participants | در این نمونه، در میان شرکت‌کنندگان | keep the scope |
+
+<!-- fa-lint-ignore-end -->
+
+The four drifts to watch for, each of which changes a finding:
+
+<!-- fa-lint-ignore-start -->
+
+- **Rounding.** 58.8% stays ۵۸٫۸ درصد. Do not turn it into «حدود ۵۹ درصد».
+- **Hardening.** «approximately 59%» stays «حدود ۵۹ درصد», not «۵۹ درصد».
+  «suggests» does not become «نشان می‌دهد» or «ثابت می‌کند».
+
+<!-- fa-lint-ignore-end -->
+
+- **Softening.** A claim the source states firmly is not weakened with
+  «احتمالاً» or «ممکن است» to sound cautious.
+- **Scope creep.** A result in one sample, region or period does not become
+  «در ایران» or «به‌طور کلی». Correlation does not become causation, and
+  «تفاوت معناداری مشاهده نشد» does not become «تفاوتی وجود ندارد».
+
+This is where §2's "one hedge per claim" yields. That rule is about stacking
+hedges in your own prose. In a paraphrase, the hedges mirror the source,
+including a double hedge if the source has one.
+
+**Fidelity check.** Before handing over a source-based paraphrase, answer
+these. Every answer must be «خیر»:
+
+- آیا چیزی خارج از منبع وارد متن شده است؟
+- آیا استنباط پژوهشگر یا مدل وارد متنِ منبع‌محور شده است؟
+- آیا قیدی از قیدهای شدت، مقدار، دامنه یا عدم قطعیت منبع حذف یا تضعیف شده است؟
+- آیا قیدی بدون معادل در منبع اضافه شده است؟
+
+When the user asks for an audit, show it as a table: source sentence, Persian
+paraphrase, qualifiers kept, and a flag column.
+
 ## 6. Numbers, statistics, formulas
 
 - Persian digits in prose: «۱۲۸ شرکت‌کننده»، «۹۱٪». Spell out small counts
@@ -1306,6 +1423,45 @@ cycling reads as AI *and* confuses reviewers.
 - **یافته‌ها:** report, don't interpret; every claim tied to a table/figure/test.
 - **بحث:** interpret against the literature; limitations (specific);
   one-paragraph practical implication beats a «چشم‌انداز روشن» closer.
+
+**List or prose, in a thesis.** Argument lives in paragraphs (A2), but some
+thesis parts are conventionally lists, one item per line:
+
+- فرضیه‌ها، پرسش‌ها و اهداف پژوهش: numbered, one sentence each;
+- پیشنهادها برای پژوهش‌های آتی: numbered;
+- تعاریف نظری و عملیاتی in chapter one: the term, then one or two lines of
+  definition, each term on its own.
+
+Everything else is prose. Each paragraph carries one idea, and its length
+follows the idea. Paragraphs of identical length are a sign of templated
+writing; vary them because the content varies, not by a word-count formula.
+
+**Diacritics.** No اعراب in running text. Add a vowel mark only where a word
+is genuinely ambiguous without it (کُرد / کَرد) or in a direct quotation that
+has one. ZWNJ is not optional: می‌شود، پژوهش‌ها.
+
+## 7.5 House style (شیوه‌نامه) and advisor preferences
+
+Departments and advisors often add their own rules: banned word lists, no
+Latin in the body, preferred synonyms (ارتباط for پیوند، بخش for محور),
+paragraph length targets. Follow them; the شیوه‌نامه outranks this file on
+matters of taste. Three cases need care, because a house rule applied blindly
+would change what the text says:
+
+- **A banned hedge.** If «احتمالاً» or «ممکن است» is on the banned list but the
+  source hedges, keep the hedge with a permitted word of the same strength:
+  «به احتمال زیاد»، «امکان دارد»، «به نظر می‌رسد». A ban on a word never
+  overrides §5.5.
+- **"No negative sentences."** Avoid needless negation (double negatives,
+  «نه‌تنها ... بلکه ...»), but a negative finding stays negative.
+  «تفاوت معناداری مشاهده نشد» rewritten as «دو گروه مشابه بودند» claims an
+  equivalence the test never established.
+- **No Latin in the body.** Move the English equivalents to پانویس or a
+  واژه‌نامه at the end of the thesis rather than dropping them. Statistical
+  notation (p، F، R²) stays as it is.
+
+Guillemets «» are the standard Persian quotation mark. Replace them only if the
+شیوه‌نامه explicitly requires another mark.
 
 ## 8. First-person calibration (by document type)
 
@@ -1367,6 +1523,9 @@ evidence of having done the work — rather than trying to satisfy the tool.
 1. Register: no می‌باشد/لازم به ذکر است; hedges single; تعارف zero.
 2. No اولاً/ثانیاً skeletons; no bullet lists where prose belongs.
 3. پیشینه synthesizes; every number claim has a number; no invented sources.
+3b. Source-based text: nothing added, nothing dropped, every qualifier and
+   number exactly as in the source; the researcher's own inferences marked
+   and kept out (§5.5). No instruction residue (A7).
 4. Terminology: one Persian term per concept + Latin on first use.
 5. Statistics/formulas in LTR runs; Persian digits in prose.
 6. Structure matches genre (conventional sections for papers/theses).
