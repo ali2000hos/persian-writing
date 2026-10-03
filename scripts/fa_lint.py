@@ -26,6 +26,7 @@ Aggressive fixes (--aggressive):
   * "quoted Persian" → «quoted Persian»
 
 Report-only (never auto-fixed — need human/context judgment):
+  * bidi-start: a Persian line opening with a Latin word (renders LTR),
   * em/en dashes, ة, tanvin-on-Persian words (گاهاً…), attached می (میشود),
     stacked !!, ASCII digits (unless --digits)
 
@@ -34,13 +35,13 @@ Exit code: 0 = clean, 1 = issues found (check) / unfixable issues remain (fix).
 import argparse, os, re, sys, unicodedata
 
 try:
-    from scripts.persian_cleanup import protect_regions, restore_regions
+    from scripts.persian_cleanup import protect_regions, restore_regions, needs_rlm, is_rtl_dominant, _LINE_PREFIX
 except ImportError:
     try:
-        from persian_cleanup import protect_regions, restore_regions
+        from persian_cleanup import protect_regions, restore_regions, needs_rlm, is_rtl_dominant, _LINE_PREFIX
     except ImportError:
         sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-        from persian_cleanup import protect_regions, restore_regions
+        from persian_cleanup import protect_regions, restore_regions, needs_rlm, is_rtl_dominant, _LINE_PREFIX
 
 PERSIAN = r'؀-ۿ‌'
 FA_LETTER = r'[ء-غف-ئپچژکگیة]'
@@ -313,11 +314,24 @@ def _neighbours(line, idx, length=1):
 
 def check_remaining(text):
     ignored = _lint_ignored_lines(text)
+    # bidi-start only matters in a Persian document. In an English guide that
+    # quotes Persian (like this skill's own references), an English-led line
+    # is SUPPOSED to render left-to-right.
+    fa_document = is_rtl_dominant(text)
     for i, line in enumerate(text.split('\n'), 1):
         if i in ignored:
             continue
         if not re.search(FA_LETTER, line):
             continue
+        # Paragraph direction: renderers take it from the FIRST strong letter,
+        # so a Persian line that opens with a Latin word displays left-to-right.
+        segments = line.split('|') if line.lstrip().startswith('|') else \
+            [line[len(_LINE_PREFIX.match(line).group(1)):]]
+        if fa_document and any(needs_rlm(seg) for seg in segments):
+            record('bidi-start', i, line,
+                   'Persian line starts with a Latin word → renders LTR in chat/GitHub/'
+                   'Telegram. Start with a Persian word («کتابخانه‌ی React…»), or '
+                   'run persian_cleanup.py --bidi for plain-text output')
         # Dashes are flagged only INSIDE Persian prose. In a bilingual document
         # an em dash usually joins a term to its gloss («ZWNJ — نیم‌فاصله») or
         # sits in an English sentence that happens to quote one Persian word;

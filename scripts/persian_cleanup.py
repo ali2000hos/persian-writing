@@ -80,7 +80,7 @@ from typing import Callable, Iterable, List, Optional, Sequence, Union
 # Constants
 # ---------------------------------------------------------------------------
 
-__version__ = "1.3.8"  # keep in sync with SKILL.md and .claude-plugin/plugin.json
+__version__ = "1.3.9"  # keep in sync with SKILL.md and .claude-plugin/plugin.json
 
 # Zero-Width Non-Joiner (نیم‌فاصله) — the heart of Persian typography
 ZWNJ = "\u200c"
@@ -1025,6 +1025,100 @@ def edit_persian(text: str, do_spellcheck: bool = False,
     return text
 
 
+# ---------------------------------------------------------------------------
+# Bidi: paragraph direction for mixed Persian–English plain text
+# ---------------------------------------------------------------------------
+
+RLM = "‏"  # RIGHT-TO-LEFT MARK: a strong RTL character with no glyph
+
+# Markdown structure that may precede a line's first word.
+_LINE_PREFIX = re.compile(r"^([ \t]*(?:>[ \t]*)*(?:#{1,6}[ \t]+|[-*+][ \t]+|\d+[.)][ \t]+)?)")
+
+
+def _strong_dir(ch: str) -> Optional[str]:
+    b = unicodedata.bidirectional(ch)
+    if b == "L":
+        return "L"
+    if b in ("R", "AL"):
+        return "R"
+    return None
+
+
+def first_strong(s: str) -> Optional[str]:
+    """Direction of the first strongly-directional character: 'L', 'R' or None."""
+    for ch in s:
+        d = _strong_dir(ch)
+        if d:
+            return d
+    return None
+
+
+def is_rtl_dominant(s: str) -> bool:
+    """More right-to-left letters than left-to-right ones."""
+    r = sum(1 for ch in s if _strong_dir(ch) == "R")
+    l = sum(1 for ch in s if _strong_dir(ch) == "L")
+    return r > l
+
+
+def needs_rlm(segment: str) -> bool:
+    """A Persian segment whose first strong letter is Latin.
+
+    Chat apps, GitHub, Telegram, most editors and Markdown previews choose each
+    paragraph's direction from its FIRST strong character. «React یک کتابخانه
+    است.» therefore renders as a left-to-right paragraph: left-aligned, the
+    final period on the wrong side, word order scrambled.
+    """
+    return (is_rtl_dominant(segment) and first_strong(segment) == "L"
+            and not segment.lstrip().startswith(RLM))
+
+
+def fix_bidi(text: str) -> str:
+    """Prefix RLM to Persian lines (and table cells) that begin with Latin.
+
+    OPT-IN, for text that will be pasted or displayed as plain text or Markdown
+    (chat, Telegram, GitHub, notes, email bodies). The better fix is always to
+    rewrite the sentence so it starts with a Persian word — «کتابخانه‌ی React
+    …» instead of «React …» — and this function is the fallback for lines that
+    must start with a name or code identifier.
+
+    Never use it on code, file names, data files, or HTML/DOCX (those carry
+    direction in markup: dir="rtl", <w:bidi/>). The mark is invisible on
+    purpose, which is also why it is kept out of the default --edit pipeline:
+    invisible characters break search and copy-paste into code, so they must be
+    something you ask for. This is display direction, not concealment — the
+    output reads the same, it just renders the right way round.
+
+    Idempotent; fenced code blocks are left untouched.
+    """
+    out: List[str] = []
+    in_fence = False
+    for line in text.split("\n"):
+        stripped = line.lstrip()
+        if stripped.startswith("```") or stripped.startswith("~~~"):
+            in_fence = not in_fence
+            out.append(line)
+            continue
+        if in_fence or not stripped:
+            out.append(line)
+            continue
+        if stripped.startswith("|"):
+            cells = line.split("|")
+            fixed = []
+            for cell in cells:
+                if needs_rlm(cell):
+                    lead = len(cell) - len(cell.lstrip(" \t"))
+                    cell = cell[:lead] + RLM + cell[lead:]
+                fixed.append(cell)
+            out.append("|".join(fixed))
+            continue
+        prefix = _LINE_PREFIX.match(line).group(1)
+        body = line[len(prefix):]
+        if needs_rlm(body):
+            line = prefix + RLM + body
+        out.append(line)
+    return "\n".join(out)
+
+
 def clean(
     text: str,
     steps: Optional[Sequence[Callable[[str], str]]] = None,
@@ -1068,6 +1162,7 @@ _FN_REGISTRY = {
     "fix_zwnj_possessives": fix_zwnj_possessives,
     "fix_zwnj_compound_verbs": fix_zwnj_compound_verbs,
     "edit_persian": edit_persian,
+    "fix_bidi": fix_bidi,
     "spellcheck": spellcheck,
     "clean": clean,
 }
@@ -1091,6 +1186,13 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     p.add_argument(
         "--edit", action="store_true",
         help="Paknevis-style editorial pass (conservative, preserves content).",
+    )
+    p.add_argument(
+        "--bidi", action="store_true",
+        help="Opt-in: prefix an invisible RLM (U+200F) to Persian lines and table "
+             "cells that start with a Latin word, so chat apps, GitHub and Telegram "
+             "render them right-to-left. For plain-text/Markdown output only. "
+             "Combine with --edit, or use alone.",
     )
     p.add_argument(
         "--normalize", action="store_true",
@@ -1207,6 +1309,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     elif args.edit:
         out = edit_persian(text, do_spellcheck=args.spellcheck)
         applied = ["edit_persian"] + (["spellcheck"] if args.spellcheck else [])
+    elif args.bidi:
+        out = fix_bidi(text)
+        applied = ["fix_bidi"]
     elif args.normalize:
         out = normalize_persian(text, use_dictionary=args.use_dictionary)
         if args.spellcheck:
@@ -1216,6 +1321,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         # Default: davat-style aggressive clean
         out = clean(text)
         applied = ["PERSIAN_STEPS"]
+
+    if args.bidi and "fix_bidi" not in applied:
+        out = fix_bidi(out)
+        applied.append("fix_bidi")
 
     if args.json:
         payload = {

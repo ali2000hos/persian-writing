@@ -187,3 +187,82 @@ Formal prose: one-word numbers under eleven often spelled out (سه پیشنها
 | سال 2026 | سال ۲۰۲۶ | Persian digits |
 
 <!-- fa-lint-ignore-end -->
+
+## 9. Mixed Persian–English text: direction (bidi)
+
+The most visible failure in mixed text is not a spelling error — it is a line
+that renders backwards. Readers report it as «متن چپ‌چین شده و قابل خواندن
+نیست», and they have to fix it by hand.
+
+**Why it happens.** Most surfaces that show plain text or Markdown — chat apps,
+GitHub, Telegram, note apps, Markdown previews, many editors — decide each
+paragraph's direction from its **first strong letter** (the Unicode bidi
+algorithm with `dir="auto"`). Persian letters are right-to-left, Latin letters
+left-to-right, while digits, spaces and punctuation are neutral and take the
+direction of what surrounds them. So:
+
+<!-- fa-lint-ignore-start -->
+
+| Line | First strong letter | Renders as |
+|---|---|---|
+| React یک کتابخانه است. | R of React → LTR | left-aligned, period jumps, words reorder |
+| - Docker لازم است. | D → LTR | the bullet flips sides |
+| ## API چیست؟ | A → LTR | the heading flips sides |
+| ۲۰۲۶ سال خوبی بود. | digits are neutral → سال → RTL | correct |
+| کتابخانه‌ی React را نصب کنید. | ک → RTL | correct |
+
+<!-- fa-lint-ignore-end -->
+
+**Rule 1: lead with a Persian word.** Every sentence, bullet, heading, table
+cell, caption and message must start with a Persian word. The fix is almost
+always natural Persian anyway, because Persian names a thing by its kind:
+
+<!-- fa-lint-ignore-start -->
+
+| ❌ Starts with Latin | ✅ Starts with Persian |
+|---|---|
+| React یک کتابخانه‌ی جاوااسکریپت است. | کتابخانه‌ی React برای ساخت رابط کاربری است. |
+| Docker را نصب کنید. | ابتدا Docker را نصب کنید. |
+| - API پاسخ را برمی‌گرداند. | - رابط API پاسخ را برمی‌گرداند. |
+| ## SEO چیست؟ | ## سئو (SEO) چیست؟ |
+| `npm install` را اجرا کنید. | دستور `npm install` را اجرا کنید. |
+| Google Analytics داده‌ها را نشان می‌دهد. | ابزار Google Analytics داده‌ها را نشان می‌دهد. |
+
+<!-- fa-lint-ignore-end -->
+
+Useful leading words: ابزار، کتابخانه‌ی، فریم‌ورک، سرویس، دستور، فایل، نسخه‌ی،
+شرکت، برند، زبان، افزونه‌ی، پلتفرم، سامانه‌ی، رابط. If the term has a common
+Persian form, prefer it (سئو، ایمیل، اینستاگرام) and keep the Latin in
+parentheses on first mention.
+
+**Rule 2: keep each Latin run whole.** A Latin run stays left-to-right inside
+the Persian line, so «نسخه‌ی Python 3.11» is fine. Problems come from splitting a
+Latin phrase with Persian words or punctuation, or from a Persian word ending
+in Latin punctuation. Write the run in one piece and use Persian punctuation
+after it: «از React، Vue و Svelte» (Persian «،», not «,»).
+
+**Rule 3: when a line must start with Latin** — a code identifier at the head
+of a list, a product name in a table cell, a reply that quotes a command —
+and the output is plain text or Markdown, run:
+
+```bash
+python3 scripts/persian_cleanup.py --bidi --in text.md --out text.md
+python3 scripts/persian_cleanup.py --edit --bidi --in text.md --out text.md
+```
+
+`--bidi` puts an invisible RIGHT-TO-LEFT MARK (U+200F, RLM) at the start of only
+those lines and table cells, after any Markdown marker (`- `, `## `, `> `,
+`1. `). It skips code blocks and English lines, and running it twice changes
+nothing. `fa_lint.py --check` reports the lines that need it as `bidi-start`.
+
+It is opt-in, not part of `--edit`, because invisible characters have costs:
+they break exact-match search, and pasted into code or a filename they cause
+errors that cannot be seen. Use it for text meant to be **read**. Never use it
+for code, data, filenames or URLs. It changes how a text displays, never what
+it says, and has nothing to do with hiding authorship.
+
+**Formats that carry direction in markup do not need marks.** Set the direction
+there instead: HTML `dir="rtl"` plus `<bdi>` around Latin fragments
+(html-css.md), DOCX `<w:bidi/>` and `<w:rtl/>` (docx-pdf.md), PowerPoint
+`rtl="1"` (pptx.md), Excel `rightToLeft`. A correctly built document never
+needs RLM.

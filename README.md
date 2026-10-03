@@ -92,6 +92,19 @@ After editing SKILL.md or references, regenerate the single-file edition:
 
 ## Version history
 
+- **1.3.9** — Persian text that mixes in English words no longer renders
+  backwards. Chat apps, GitHub, Telegram and most editors set a paragraph's
+  direction from its first letter, so a Persian line opening with a Latin word
+  («React یک کتابخانه است.») displayed left-to-right: wrong alignment, the
+  period on the wrong side, words scrambled. New non-negotiable rule: every
+  Persian sentence, bullet, heading and table cell starts with a Persian word
+  («کتابخانه‌ی React…»), with a full guide in orthography.md §9.
+  `fa_lint.py` reports offending lines as `bidi-start`, and the new opt-in
+  `persian_cleanup.py --bidi` adds an invisible RLM (U+200F) to exactly those
+  lines for plain-text output. It skips code and English lines, is idempotent,
+  and is never applied by default. Reported by
+  [@aliamini587](https://github.com/aliamini587) in
+  [#4](https://github.com/ali2000hos/persian-writing/issues/4).
 - **1.3.8** — `--edit` stopped corrupting the non-prose inside Persian
   documents. URLs (`?lang=fa` became `؟lang=fa`), email addresses, IBANs,
   international phone numbers, software versions, DOIs and English citations

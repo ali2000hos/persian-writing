@@ -14,7 +14,7 @@ description: >
   like فارسی, Farsi, Persian, Iran, RTL, راست‌چین, نیم‌فاصله, ویرایش, مقاله,
   پایان‌نامه, سئو, کپشن, Vazirmatn — even if the user never mentions this skill.
 metadata:
-  version: 1.3.8
+  version: 1.3.9
 license: MIT (bundled fonts under SIL OFL)
 compatibility: >
   Any agent that reads Markdown skills (Claude, Claude Code, Cursor, Codex,
@@ -127,7 +127,7 @@ Full guide in `references/writing-style.md`. The core moves:
 
 ## Orthography: non-negotiables
 
-Full rules in `references/orthography.md`. These six apply to every deliverable:
+Full rules in `references/orthography.md`. These apply to every deliverable:
 
 1. **ZWNJ (نیم‌فاصله, U+200C)** — می‌شود نه می شود؛ کتاب‌ها نه کتاب ها؛
    بزرگ‌تر، خانه‌ام، به‌عنوان. In code: `‌` or HTML `&zwnj;`.
@@ -141,6 +141,15 @@ Full rules in `references/orthography.md`. These six apply to every deliverable:
    Iranians treat this error as a mark of carelessness — orthography.md §5.1.
 5. **No em/en dashes** in Persian prose — use «،» or restructure.
 6. **Never letter-space Persian** (it breaks letter joining), never fake bold/italic.
+7. **Never start a Persian line with a Latin word.** Chat apps, GitHub, Telegram
+   and most editors set each paragraph's direction from its FIRST letter, so
+   «React یک کتابخانه است.» renders left-to-right — wrong alignment, the period
+   on the wrong side, words scrambled. This covers every sentence, bullet,
+   heading, table cell and caption. Lead with a Persian word instead:
+   «کتابخانه‌ی React…»، «ابزار Docker…»، «دستور `npm install`…».
+   For plain-text output where a line must open with a name,
+   `persian_cleanup.py --bidi` adds an invisible direction mark. Full rules:
+   orthography.md §9.
 
 Two scripts enforce this mechanically — use both before delivering Persian text:
 
