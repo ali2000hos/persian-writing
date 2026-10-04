@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/banner.png" alt="persian-writing — فارسی، روان‌تر" width="100%">
+  <img src="docs/banner.png" alt="persian-writing — فارسی، به زبان خودمان" width="100%">
 </p>
 
 # persian-writing
@@ -201,3 +201,7 @@ AI-tell patterns adapted for Persian from Wikipedia's
 ["Signs of AI writing"](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing)
 via the [humanizer](https://github.com/blader/humanizer) skill. E-E-A-T and
 quality-gate principles adapted from [claude-seo](https://github.com/AgriciDaniel/claude-seo).
+
+## Sponsor
+
+Thanks to [ParsPack (پارس‌پک)](https://parspack.com/) for supporting this project.
