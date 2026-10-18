@@ -18,6 +18,7 @@ PARTS = [
     ('orthography.md',      'Orthography (نگارش و رسم‌الخط)'),
     ('content-structures.md', 'Content craft: POV, structure, honesty'),
     ('academic.md',         'Academic writing (نگارش علمی)'),
+    ('classic-register.md', 'Classic literary register (نثر فاخر)'),
     ('social-channels.md',  'Social channels: Telegram & Instagram'),
     ('seo-copywriting.md',  'SEO writing & copywriting'),
     ('fonts.md',            'Fonts'),

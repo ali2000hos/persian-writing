@@ -14,7 +14,7 @@ description: >
   like فارسی, Farsi, Persian, Iran, RTL, راست‌چین, نیم‌فاصله, ویرایش, مقاله,
   پایان‌نامه, سئو, کپشن, Vazirmatn — even if the user never mentions this skill.
 metadata:
-  version: 1.4.0
+  version: 1.5.0
 license: MIT (bundled fonts under SIL OFL)
 compatibility: >
   Any agent that reads Markdown skills (Claude, Claude Code, Cursor, Codex,
@@ -44,6 +44,7 @@ read the reference file for your output format before generating anything.
 | Any Persian prose (always) | `references/writing-style.md` |
 | Mechanical correctness (always) | `references/orthography.md` |
 | Academic: paper, thesis, report, مقاله/پایان‌نامه | `references/academic.md` |
+| Dignified formal prose: letters to elders/authorities, prefaces, memorials, congratulations, storytelling | `references/classic-register.md` |
 | Educational/technical content, docs, product pages, how-to | `references/content-structures.md` |
 | Telegram, Instagram, captions, carousels, reels, stories | `references/social-channels.md` |
 | SEO content, blog for search, landing/ad copy, کپشن فروش | `references/seo-copywriting.md` |

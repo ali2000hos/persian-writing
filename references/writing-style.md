@@ -19,6 +19,7 @@ the register BEFORE writing, using the procedure below — never by feel.
 | Blog post, newsletter, product update, LinkedIn | **Semi-formal** | Written forms + warm voice، direct address، occasional colloquial word |
 | Instagram, Telegram, chat replies, friendly email, story captions | **Colloquial written** (محاوره‌نویسی) | میشه، می‌خوام، رو، particles، fillers |
 | Paper, thesis, university report, مقاله/پایان‌نامه | **Academic** (نگارش علمی) | Measured, hedged, passive OK, zero تعارف — full guide: `academic.md` |
+| Letters to elders and authorities that stay human, prefaces, memorials, dignified announcements and storytelling | **Classic literary** (نثر فاخر) — formal-but-human, elevated | Short active sentences، verbs and nouns over adjectives، paired words where natural — full guide: `classic-register.md` |
 
 ### The detection procedure (apply in this order)
 

@@ -92,6 +92,17 @@ After editing SKILL.md or references, regenerate the single-file edition:
 
 ## Version history
 
+- **1.5.0** — classic literary register (نثر فاخر). A new reference for
+  elevated-but-clear formal Persian: dignified without turning bureaucratic,
+  for letters that must stay human under ceremony, prefaces, memorials and
+  congratulations. Learned from five books named as style sources
+  (سیر حکمت در اروپا، دو قرن سکوت و پله‌پله تا ملاقات خدا، سووشون،
+  چشمه روشن), features paraphrased with one attributed snippet. Its rules:
+  short active sentences; verbs and nouns over adjective-stacking; pure
+  plain words; dignity from structure, not from rare vocabulary; explicit
+  causal links. Routing rows added to SKILL.md's Step-0 table and
+  writing-style.md's Part-1 register table, and the universal edition
+  carries it via build_universal.py's PARTS list.
 - **1.4.0** — source-faithful academic paraphrase. Rewriting a paper into a
   thesis chapter now follows one rule: change wording and structure only. No
   inference or bridging link is added, nothing is dropped, and every qualifier
