@@ -14,7 +14,7 @@ description: >
   like فارسی, Farsi, Persian, Iran, RTL, راست‌چین, نیم‌فاصله, ویرایش, مقاله,
   پایان‌نامه, سئو, کپشن, Vazirmatn — even if the user never mentions this skill.
 metadata:
-  version: 1.4.0
+  version: 1.5.0
 license: MIT (bundled fonts under SIL OFL)
 compatibility: >
   Any agent that reads Markdown skills (Claude, Claude Code, Cursor, Codex,
@@ -230,6 +230,14 @@ Format-specific recipes live in the reference files. The universal ones:
 7. **Symbols:** Persian fonts miss many glyphs. In bundled Vazirmatn/Lalezar
    only • and · are verified; ▪ ■ ✓ ✕ ● ◆ ⊙ fall back to DejaVu. For any other
    symbol/font, check the cmap first (fonts.md shows how).
+8. **Equations in Word: native OMML from LaTeX, never raw `$...$`.** Word does
+   not render raw LaTeX strings in text runs, and RTL paragraphs reverse plain
+   Unicode math. Convert LaTeX to `<m:oMath>` / `<m:oMathPara>` via
+   `scripts/latex_to_omml.py` (`add_inline_math` / `add_display_math` in
+   python-docx, or `latex_to_omml.py --docx output.docx` after docx-js), keep
+   display-equation paragraphs LTR (`<w:bidi w:val="0"/>`), and place Persian
+   equation numbers («(۱)») in a 3-column borderless `cantSplit` RTL table —
+   docx-pdf.md §7.
 
 ## Verify before delivering
 
@@ -285,6 +293,7 @@ persian-writing/
 ├── scripts/
 │   ├── persian_cleanup.py      ← FIX: edit/clean/normalize/spell-check (paknevis+davat)
 │   ├── fa_lint.py              ← LINT: report issues needing contextual judgment
+│   ├── latex_to_omml.py        ← LaTeX math → native Word OMML (<m:oMath>) + .docx patcher
 │   ├── verify_docx.py          ← DOCX RTL checks (+ --fix for section bidi)
 │   ├── verify_pdf.py           ← post-generation PDF checks
 │   ├── check_version.py        ← verify the version matches in all four places

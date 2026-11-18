@@ -235,6 +235,14 @@ Format-specific recipes live in the reference files. The universal ones:
 7. **Symbols:** Persian fonts miss many glyphs. In bundled Vazirmatn/Lalezar
    only • and · are verified; ▪ ■ ✓ ✕ ● ◆ ⊙ fall back to DejaVu. For any other
    symbol/font, check the cmap first (fonts.md shows how).
+8. **Equations in Word: native OMML from LaTeX, never raw `$...$`.** Word does
+   not render raw LaTeX strings in text runs, and RTL paragraphs reverse plain
+   Unicode math. Convert LaTeX to `<m:oMath>` / `<m:oMathPara>` via
+   the latex_to_omml script (full package; chat-only AIs apply the equivalent rules manually) (`add_inline_math` / `add_display_math` in
+   python-docx, or `latex_to_omml.py --docx output.docx` after docx-js), keep
+   display-equation paragraphs LTR (`<w:bidi w:val="0"/>`), and place Persian
+   equation numbers («(۱)») in a 3-column borderless `cantSplit` RTL table —
+   docx-pdf.md §7.
 
 ## Verify before delivering
 
@@ -246,7 +254,7 @@ then check the PDF:
 #    then section bidi, jc=right traps, cs fonts, list numbering, heading colors.
 #    --fix repairs missing <w:bidi/>; --sanitize strips the Word-for-Mac template
 #    artifacts python-docx inherits (the classic "file is corrupt" fingerprint).
-python3 scripts/verify_docx.py output.docx --expect-font Vazirmatn --fix --sanitize
+python3 the verify_docx script (full package; chat-only AIs apply the equivalent rules manually) output.docx --expect-font Vazirmatn --fix --sanitize
 
 # 2. PDF: fallback fonts, blank pages, template leaks, Arabic chars
 python3 the verify_pdf script (full package; chat-only AIs apply the equivalent rules manually) output.pdf --expect-font Vazirmatn
@@ -1408,7 +1416,14 @@ paraphrase, qualifiers kept, and a flag column.
   at sentence start.
 - Statistical notation stays Latin and LTR: p < 0.05, F(2,45) = 3.71, R².
   Keep the whole expression in one LTR run so bidi doesn't scramble it.
-- Formulas: LTR blocks (dir="ltr" / LTR paragraph), numbered «رابطه‌ی ۱».
+- Formulas: write in LaTeX (`$...$` inline, `$$...$$` display; `persian_cleanup.py --edit`
+  protects LaTeX math automatically so ASCII digits and symbols stay intact).
+  In Word/`.docx`, NEVER leave raw `$...$` text or plain Unicode math — convert
+  LaTeX to native editable Word OMML equations (`<m:oMath>` / `<m:oMathPara>`)
+  via the latex_to_omml script (full package; chat-only AIs apply the equivalent rules manually) (`add_inline_math`, `add_display_math`, or
+  `--docx`), set `<w:bidi w:val="0"/>` on display-math paragraphs, and place
+  Persian equation numbers («(۱)»، «(۲-۱)»، cited in prose as «رابطه‌ی ۱») in a
+  3-column borderless `cantSplit` RTL table — see docx-pdf.md §7.
 - Tables: «جدول ۱: عنوان» ABOVE the table, «شکل ۱: عنوان» BELOW the figure.
   Caption paragraphs get keepNext (caption never strands on the wrong page) —
   see docx-pdf.md.
@@ -1527,7 +1542,7 @@ evidence of having done the work — rather than trying to satisfy the tool.
    number exactly as in the source; the researcher's own inferences marked
    and kept out (§5.5). No instruction residue (A7).
 4. Terminology: one Persian term per concept + Latin on first use.
-5. Statistics/formulas in LTR runs; Persian digits in prose.
+5. Statistics/formulas in LTR runs; in `.docx`, LaTeX converted to native OMML (`<m:oMath>`) via the latex_to_omml script (full package; chat-only AIs apply the equivalent rules manually); Persian digits in prose and equation labels.
 6. Structure matches genre (conventional sections for papers/theses).
 7. Run the persian_cleanup script (full package; chat-only AIs apply the equivalent rules manually) --edit` then the fa_lint script (full package; chat-only AIs apply the equivalent rules manually) --check`
    on the text; fix everything contextual (dashes, میشود forms).
@@ -2156,6 +2171,7 @@ reusable part; the styling is not.
 4. Fonts and PDF conversion workflow
 5. Verification checklist (mandatory)
 6. python-docx equivalents
+7. Equations: LaTeX → native Word OMML (`<m:oMath>`)
 
 ---
 
@@ -2566,7 +2582,7 @@ that Word reports as corrupt on Windows. For anything you hand to a client,
 clear them:
 
 ```bash
-python3 scripts/verify_docx.py out.docx --fix --sanitize
+python3 the verify_docx script (full package; chat-only AIs apply the equivalent rules manually) out.docx --fix --sanitize
 ```
 
 `--sanitize` removes the stray parts, strips their references from
@@ -2786,9 +2802,77 @@ Page numbers in footers: a Latin field digit flips the line — prefer a Persian
 literal, or accept Latin numerals in the footer only.
 
 **Confirm the fix in the output, not the code:** `pdffonts out.pdf` must list
-your Persian font and nothing else. A `DejaVu` or `OpenSymbol` row means a
-glyph fell back — usually a list bullet or a symbol from §1.4.
-the verify_pdf script (full package; chat-only AIs apply the equivalent rules manually) flags this automatically.
+your Persian font and nothing else (plus `CambriaMath` when the document has
+equations). A `DejaVu` or `OpenSymbol` row on prose means a glyph fell back —
+usually a list bullet or a symbol from §1.4. the verify_pdf script (full package; chat-only AIs apply the equivalent rules manually) flags this
+automatically.
+
+---
+
+## 7. Equations: LaTeX → native Word OMML (`<m:oMath>`)
+
+Writing raw `$x^2 + y^2 = z^2$` into a Word run leaves literal dollar signs in
+the document — Word never auto-compiles `$...$` strings stored in XML. Writing
+Unicode math (`x² + y² = z²`) inside an RTL Persian paragraph fails differently:
+the bidi algorithm reverses operators and parentheses across the Persian line.
+
+Word's native editable equation format is **OMML** (`<m:oMath>` inline,
+`<m:oMathPara>` for display blocks). Bundled the latex_to_omml script (full package; chat-only AIs apply the equivalent rules manually)
+(Python stdlib only) converts LaTeX math — fractions, roots, sums/integrals,
+limits, matrices, `cases`, `aligned`, accents, Greek letters, `\mathbb`,
+`\mathcal`, and `\text{...}` — directly into valid OMML.
+
+Three RTL rules govern equations in a Persian `.docx`:
+
+1. **Math runs use `Cambria Math` (`ascii`/`hAnsi` only) with `w:rtl="0"`.**
+   Otherwise `Normal` style's Persian font and `<w:rtl/>` from `persianize_styles()`
+   bleed into the equation. Leaving `w:cs` unset on math runs keeps `verify_docx.py`
+   happy unless `\text{...}` actually contains Persian words.
+2. **Display equation paragraphs set `<w:bidi w:val="0"/>`.** Because `Normal`
+   carries `<w:bidi/>`, an unflagged paragraph inherits RTL direction and can
+   mirror the entire formula in RTL-enabled Word installations.
+3. **Numbered display equations («(۱)» or «(۲-۱)») use a 3-column borderless
+   `cantSplit` RTL table** (`15%` empty visual right | `70%` centered LTR
+   `<m:oMathPara>` | `15%` Persian label on the visual left). Mixing an LTR
+   formula and an RTL Persian number in one paragraph either loses true
+   centering or scrambles parentheses around `(۲-۱)`.
+
+### 7.1 In `python-docx`
+
+```python
+from scripts.latex_to_omml import add_inline_math, add_display_math
+
+# Inline equation inside an RTL Persian sentence
+p = doc.add_paragraph()
+rtl_paragraph(p)
+fa_run(p, "ضریب همبستگی از رابطه‌ی ")
+add_inline_math(p, r"r = \frac{\sum_{i=1}^{n}(x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum_{i=1}^{n}(x_i - \bar{x})^2 \sum_{i=1}^{n}(y_i - \bar{y})^2}}")
+fa_run(p, " محاسبه می‌شود.")
+
+# Centered LTR display equation (unnumbered)
+add_display_math(doc, r"\sigma^2 = \frac{1}{n - 1} \sum_{i=1}^{n} (x_i - \bar{x})^2")
+
+# Numbered display equation — builds the 3-col borderless cantSplit RTL table
+# Digits in number= or \tag{...} are automatically converted to Persian: "2-1" → "(۲-۱)"
+add_display_math(doc, r"\hat{y}_i = \beta_0 + \sum_{j=1}^{p} \beta_j x_{ij} + \varepsilon_i", number="۲-۱")
+```
+
+### 7.2 From `docx-js`, templates, or CLI (`--docx`)
+
+If you generate the `.docx` in JavaScript (`docx-js`) or from a template, write
+standard LaTeX delimiters in your text runs — `$...$` for inline equations, and
+a standalone `$$...$$` paragraph for display equations (add `\tag{۲-۱}` inside
+`$$...$$` when you want a numbered 3-column equation row) — then run the
+post-processor before `verify_docx.py`:
+
+```bash
+python3 the latex_to_omml script (full package; chat-only AIs apply the equivalent rules manually) --docx output.docx
+python3 the verify_docx script (full package; chat-only AIs apply the equivalent rules manually) output.docx --expect-font Vazirmatn --fix --sanitize
+```
+
+`verify_docx.py` reports the `<m:oMath>` count and warns if any raw `$...$` or
+`\frac{...}` LaTeX leaked into `<w:t>` runs unconverted, or if an
+`<m:oMathPara>` paragraph inherited RTL direction without `<w:bidi w:val="0"/>`.
 
 
 

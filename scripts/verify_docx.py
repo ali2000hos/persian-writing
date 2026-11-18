@@ -294,6 +294,37 @@ def check(path, expect_fonts):
                 warnings.append(f'{name} has Persian text but no <w:bidi> — '
                                 f'headers/footers inherit nothing from the body')
 
+    # 9. equations: native OMML (<m:oMath>) vs leaked raw LaTeX ($...$, \frac{...})
+    n_math = len(re.findall(r'<m:oMath\b', doc))
+    if n_math:
+        notes.append(f'math zones (<m:oMath>): {n_math}')
+    raw_latex = re.findall(
+        r'\$\$[\s\S]+?\$\$|\\\[[\s\S]+?\\\]|\\\([^\n]+?\\\)'
+        r'|(?<![\\$])\$(?![ \t\n$])(?:\\text\{[^}\n]*\}|\\.|[^$\n\u0600-\u06ff])+?(?<![ \t\n\\$])\$(?![0-9$])'
+        r'|\\(?:frac|dfrac|tfrac|sqrt|sum|int|prod|lim|begin)\s*[\[{_]',
+        body,
+    )
+    if raw_latex:
+        sample = raw_latex[0][:40].replace('\n', ' ')
+        warnings.append(f'raw LaTeX math in text runs ({sample!r}) — Word renders this '
+                        f'as literal text, not an equation; convert to <m:oMath> via '
+                        f'scripts/latex_to_omml.py')
+    styles_has_bidi = bool(re.search(r'<w:bidi(?:\s*/>|\s+w:val="(?:1|true)")', styles))
+    rtl_disp_math = 0
+    for p_xml in re.findall(r'<w:p\b[^>]*>.*?</w:p>', doc, re.S):
+        if '<m:oMathPara' not in p_xml:
+            continue
+        ppr_m = re.search(r'<w:pPr\b[^>]*>(.*?)</w:pPr>', p_xml, re.S)
+        ppr = ppr_m.group(1) if ppr_m else ''
+        explicit_ltr = bool(re.search(r'<w:bidi\s+w:val="(?:0|false)"', ppr))
+        explicit_rtl = bool(re.search(r'<w:bidi(?:\s*/>|\s+w:val="(?:1|true)")', ppr))
+        if explicit_rtl or (styles_has_bidi and not explicit_ltr):
+            rtl_disp_math += 1
+    if rtl_disp_math:
+        warnings.append(f'{rtl_disp_math} display equation paragraph(s) (<m:oMathPara>) '
+                        f'inherit or set RTL direction — set <w:bidi w:val="0"/> on the '
+                        f'equation paragraph so math stays left-to-right')
+
     return errors, warnings, notes
 
 

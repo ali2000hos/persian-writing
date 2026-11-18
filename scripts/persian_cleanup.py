@@ -80,7 +80,7 @@ from typing import Callable, Iterable, List, Optional, Sequence, Union
 # Constants
 # ---------------------------------------------------------------------------
 
-__version__ = "1.4.0"  # keep in sync with SKILL.md and .claude-plugin/plugin.json
+__version__ = "1.5.0"  # keep in sync with SKILL.md and .claude-plugin/plugin.json
 
 # Zero-Width Non-Joiner (نیم‌فاصله) — the heart of Persian typography
 ZWNJ = "\u200c"
@@ -215,6 +215,12 @@ _PROTECTED_PATTERNS = (
     _FENCED_CODE,
     _TABLE_ROW,
     _INLINE_CODE,
+    # LaTeX display and inline math (protected so digits, commas and quotes stay valid TeX;
+    # inline $...$ follows Pandoc tex_math_dollars rules to avoid matching $100 currency)
+    re.compile(r"\$\$[\s\S]+?\$\$"),
+    re.compile(r"\\\[[\s\S]+?\\\]"),
+    re.compile(r"\\\([^\n]+?\\\)"),
+    re.compile(r"(?<![\\$])\$(?![ \t\n$])(?:\\text\{[^}\n]*\}|\\.|[^$\n\u0600-\u06ff])+?(?<![ \t\n\\$])\$(?![0-9$])"),
     # English bibliography lines starting with [digit] followed by Latin author
     re.compile(r"^[ \t]*\[\d+\]\s+[A-Za-z].*$", re.MULTILINE),
     # Full URLs (http/https/www)

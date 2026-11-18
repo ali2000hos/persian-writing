@@ -79,7 +79,7 @@ def rewire_paths(text: str) -> str:
         text = text.replace(f'`{fname}`', f'the «{title}» part')
     text = text.replace('`references/cleanup/paknevis-rules.md` + `usage-patterns.md`',
                         'the Orthography part (script docs ship with the full package)')
-    text = re.sub(r'`?scripts/(persian_cleanup|fa_lint|verify_pdf|install_fonts|download_fonts|build_universal)\.(py|sh)`?',
+    text = re.sub(r'`?scripts/(persian_cleanup|fa_lint|verify_docx|verify_pdf|latex_to_omml|install_fonts|download_fonts|build_universal)\.(py|sh)`?',
                   r'the \1 script (full package; chat-only AIs apply the equivalent rules manually)',
                   text)
     return text
