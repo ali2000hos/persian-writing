@@ -27,6 +27,7 @@ reusable part; the styling is not.
 4. Fonts and PDF conversion workflow
 5. Verification checklist (mandatory)
 6. python-docx equivalents
+7. Equations: LaTeX → native Word OMML (`<m:oMath>`)
 
 ---
 
@@ -657,6 +658,74 @@ Page numbers in footers: a Latin field digit flips the line — prefer a Persian
 literal, or accept Latin numerals in the footer only.
 
 **Confirm the fix in the output, not the code:** `pdffonts out.pdf` must list
-your Persian font and nothing else. A `DejaVu` or `OpenSymbol` row means a
-glyph fell back — usually a list bullet or a symbol from §1.4.
-`scripts/verify_pdf.py` flags this automatically.
+your Persian font and nothing else (plus `CambriaMath` when the document has
+equations). A `DejaVu` or `OpenSymbol` row on prose means a glyph fell back —
+usually a list bullet or a symbol from §1.4. `scripts/verify_pdf.py` flags this
+automatically.
+
+---
+
+## 7. Equations: LaTeX → native Word OMML (`<m:oMath>`)
+
+Writing raw `$x^2 + y^2 = z^2$` into a Word run leaves literal dollar signs in
+the document — Word never auto-compiles `$...$` strings stored in XML. Writing
+Unicode math (`x² + y² = z²`) inside an RTL Persian paragraph fails differently:
+the bidi algorithm reverses operators and parentheses across the Persian line.
+
+Word's native editable equation format is **OMML** (`<m:oMath>` inline,
+`<m:oMathPara>` for display blocks). Bundled `scripts/latex_to_omml.py`
+(Python stdlib only) converts LaTeX math — fractions, roots, sums/integrals,
+limits, matrices, `cases`, `aligned`, accents, Greek letters, `\mathbb`,
+`\mathcal`, and `\text{...}` — directly into valid OMML.
+
+Three RTL rules govern equations in a Persian `.docx`:
+
+1. **Math runs use `Cambria Math` (`ascii`/`hAnsi` only) with `w:rtl="0"`.**
+   Otherwise `Normal` style's Persian font and `<w:rtl/>` from `persianize_styles()`
+   bleed into the equation. Leaving `w:cs` unset on math runs keeps `verify_docx.py`
+   happy unless `\text{...}` actually contains Persian words.
+2. **Display equation paragraphs set `<w:bidi w:val="0"/>`.** Because `Normal`
+   carries `<w:bidi/>`, an unflagged paragraph inherits RTL direction and can
+   mirror the entire formula in RTL-enabled Word installations.
+3. **Numbered display equations («(۱)» or «(۲-۱)») use a 3-column borderless
+   `cantSplit` RTL table** (`15%` empty visual right | `70%` centered LTR
+   `<m:oMathPara>` | `15%` Persian label on the visual left). Mixing an LTR
+   formula and an RTL Persian number in one paragraph either loses true
+   centering or scrambles parentheses around `(۲-۱)`.
+
+### 7.1 In `python-docx`
+
+```python
+from scripts.latex_to_omml import add_inline_math, add_display_math
+
+# Inline equation inside an RTL Persian sentence
+p = doc.add_paragraph()
+rtl_paragraph(p)
+fa_run(p, "ضریب همبستگی از رابطه‌ی ")
+add_inline_math(p, r"r = \frac{\sum_{i=1}^{n}(x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum_{i=1}^{n}(x_i - \bar{x})^2 \sum_{i=1}^{n}(y_i - \bar{y})^2}}")
+fa_run(p, " محاسبه می‌شود.")
+
+# Centered LTR display equation (unnumbered)
+add_display_math(doc, r"\sigma^2 = \frac{1}{n - 1} \sum_{i=1}^{n} (x_i - \bar{x})^2")
+
+# Numbered display equation — builds the 3-col borderless cantSplit RTL table
+# Digits in number= or \tag{...} are automatically converted to Persian: "2-1" → "(۲-۱)"
+add_display_math(doc, r"\hat{y}_i = \beta_0 + \sum_{j=1}^{p} \beta_j x_{ij} + \varepsilon_i", number="۲-۱")
+```
+
+### 7.2 From `docx-js`, templates, or CLI (`--docx`)
+
+If you generate the `.docx` in JavaScript (`docx-js`) or from a template, write
+standard LaTeX delimiters in your text runs — `$...$` for inline equations, and
+a standalone `$$...$$` paragraph for display equations (add `\tag{۲-۱}` inside
+`$$...$$` when you want a numbered 3-column equation row) — then run the
+post-processor before `verify_docx.py`:
+
+```bash
+python3 scripts/latex_to_omml.py --docx output.docx
+python3 scripts/verify_docx.py output.docx --expect-font Vazirmatn --fix --sanitize
+```
+
+`verify_docx.py` reports the `<m:oMath>` count and warns if any raw `$...$` or
+`\frac{...}` LaTeX leaked into `<w:t>` runs unconverted, or if an
+`<m:oMathPara>` paragraph inherited RTL direction without `<w:bidi w:val="0"/>`.

@@ -214,7 +214,14 @@ paraphrase, qualifiers kept, and a flag column.
   at sentence start.
 - Statistical notation stays Latin and LTR: p < 0.05, F(2,45) = 3.71, R².
   Keep the whole expression in one LTR run so bidi doesn't scramble it.
-- Formulas: LTR blocks (dir="ltr" / LTR paragraph), numbered «رابطه‌ی ۱».
+- Formulas: write in LaTeX (`$...$` inline, `$$...$$` display; `persian_cleanup.py --edit`
+  protects LaTeX math automatically so ASCII digits and symbols stay intact).
+  In Word/`.docx`, NEVER leave raw `$...$` text or plain Unicode math — convert
+  LaTeX to native editable Word OMML equations (`<m:oMath>` / `<m:oMathPara>`)
+  via `scripts/latex_to_omml.py` (`add_inline_math`, `add_display_math`, or
+  `--docx`), set `<w:bidi w:val="0"/>` on display-math paragraphs, and place
+  Persian equation numbers («(۱)»، «(۲-۱)»، cited in prose as «رابطه‌ی ۱») in a
+  3-column borderless `cantSplit` RTL table — see docx-pdf.md §7.
 - Tables: «جدول ۱: عنوان» ABOVE the table, «شکل ۱: عنوان» BELOW the figure.
   Caption paragraphs get keepNext (caption never strands on the wrong page) —
   see docx-pdf.md.
@@ -333,7 +340,7 @@ evidence of having done the work — rather than trying to satisfy the tool.
    number exactly as in the source; the researcher's own inferences marked
    and kept out (§5.5). No instruction residue (A7).
 4. Terminology: one Persian term per concept + Latin on first use.
-5. Statistics/formulas in LTR runs; Persian digits in prose.
+5. Statistics/formulas in LTR runs; in `.docx`, LaTeX converted to native OMML (`<m:oMath>`) via `scripts/latex_to_omml.py`; Persian digits in prose and equation labels.
 6. Structure matches genre (conventional sections for papers/theses).
 7. Run `scripts/persian_cleanup.py --edit` then `scripts/fa_lint.py --check`
    on the text; fix everything contextual (dashes, میشود forms).

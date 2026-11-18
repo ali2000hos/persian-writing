@@ -58,6 +58,7 @@ as knowledge (GPTs / Projects / Gems) — the whole skill in one self-contained 
 ```bash
 python3 scripts/persian_cleanup.py --edit --spellcheck draft.txt   # fix + spell-check
 python3 scripts/fa_lint.py --check draft.txt                       # lint report
+python3 scripts/latex_to_omml.py --docx out.docx                   # LaTeX → Word OMML math
 python3 scripts/verify_docx.py out.docx --fix --sanitize            # DOCX RTL + integrity
 python3 scripts/verify_pdf.py out.pdf --expect-font Vazirmatn      # PDF QA
 ```
@@ -79,8 +80,9 @@ AGENTS.md                guidance for any AI agent
 references/              writing-style, orthography, content-structures, academic,
                          social-channels, seo-copywriting, fonts, docx-pdf, pptx,
                          html-css, format-skills-fa, cleanup/
-scripts/                 persian_cleanup, fa_lint, verify_docx, verify_pdf,
-                         check_version, install_fonts, download_fonts, build_universal
+scripts/                 persian_cleanup, fa_lint, latex_to_omml, verify_docx,
+                         verify_pdf, check_version, install_fonts, download_fonts,
+                         build_universal
 assets/                  fonts (TTF) + 453K-word dictionary
 universal/               single-file edition for chat-only AIs
 .claude-plugin/          Claude Code plugin manifests
@@ -92,6 +94,21 @@ After editing SKILL.md or references, regenerate the single-file edition:
 
 ## Version history
 
+- **1.5.0** — native Word equations from LaTeX (`<m:oMath>` / `<m:oMathPara>`).
+  Writing raw `$x^2$` into a `.docx` leaves literal dollar signs, and plain
+  Unicode math inside an RTL paragraph lets bidi reverse operators and
+  parentheses. New zero-dependency `scripts/latex_to_omml.py` converts LaTeX
+  math (fractions, roots, sums/integrals, limits, matrices, `cases`, `aligned`,
+  accents, Greek letters, `\mathbb`, `\mathcal`, `\text{...}`) into native
+  editable Word OMML, with `add_inline_math` and `add_display_math` helpers for
+  `python-docx` (including a 3-column borderless `cantSplit` RTL table for
+  Persian equation numbers like `(۲-۱)` and `\tag{...}`) plus a `--docx`
+  post-processor for `docx-js` and template workflows (docx-pdf.md §7).
+  `persian_cleanup.py --edit` and `fa_lint.py` now protect `$...$` and `$$...$$`
+  math regions (without misclassifying `$100` currency), and `verify_docx.py`
+  warns on raw unrendered LaTeX in text runs or display equations missing
+  `<w:bidi w:val="0"/>`. Fixed `/tmp` path assumption in `test_verify_docx.py`
+  for Windows.
 - **1.4.0** — source-faithful academic paraphrase. Rewriting a paper into a
   thesis chapter now follows one rule: change wording and structure only. No
   inference or bridging link is added, nothing is dropped, and every qualifier
